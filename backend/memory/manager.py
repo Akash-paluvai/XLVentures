@@ -36,6 +36,12 @@ class MemoryManager:
         t0 = time.perf_counter()
 
         playbooks = semantic.query(domain_pack_id, query, k=3)
+        
+        # Dynamically retrieve and append learned heuristics if they exist
+        learned = semantic.get_document_by_id(domain_pack_id, "learned_heuristics")
+        if learned and not any(pb["id"] == "learned_heuristics" for pb in playbooks):
+            playbooks.append(learned)
+
         past_cases = episodic.get_similar_past_cases(domain_pack_id, query, limit=5)
 
         latency_ms = round((time.perf_counter() - t0) * 1000, 2)

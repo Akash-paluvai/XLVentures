@@ -135,3 +135,25 @@ def clear_collection(domain_pack_id: str) -> bool:
     except ValueError:
         # Collection does not exist
         return False
+
+
+def get_document_by_id(domain_pack_id: str, doc_id: str) -> dict:
+    """
+    Retrieve a specific document by its ID from the domain's collection.
+    Returns None if not found.
+    """
+    collection = _get_collection(domain_pack_id)
+    try:
+        res = collection.get(ids=[doc_id])
+        if res and res.get("documents") and len(res["documents"]) > 0:
+            return {
+                "id": doc_id,
+                "content": res["documents"][0],
+                "metadata": res["metadatas"][0] if res["metadatas"] else {},
+                "distance": 0.80,
+            }
+    except Exception:
+        pass
+    return None
+
+

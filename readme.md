@@ -255,13 +255,3 @@ npm run dev
 | Memory & orchestration design | | Memory layer, learning agent, writeback loop |
 | User experience | | Human approval interface, observability dashboard |
 | Business use case understanding & outcomes | 30% (business) | CS domain definition, recommendation quality, measurable metrics |
-
----
-
-## Team
-
-> _Names / roles here._
-
-## License
-
-> _TBD._

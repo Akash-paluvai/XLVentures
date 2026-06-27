@@ -59,6 +59,10 @@ def bootstrap_agents() -> None:
     Call once at application startup.
     """
     from backend.agents.context_agent import ContextAgent
+    from backend.agents.reasoning_agent import ReasoningAgent
+    from backend.agents.recommendation_agent import RecommendationAgent
+    from backend.agents.explanation_agent import ExplanationAgent
+    from backend.agents.learning_agent import LearningAgent
 
     ctx = ContextAgent()
     register_agent(
@@ -67,3 +71,37 @@ def bootstrap_agents() -> None:
         description=ctx.description,
         capabilities=ctx.capabilities,
     )
+
+    reasoning = ReasoningAgent()
+    register_agent(
+        name=reasoning.name,
+        agent=reasoning,
+        description=reasoning.description,
+        capabilities=reasoning.capabilities,
+    )
+
+    recommendation = RecommendationAgent()
+    register_agent(
+        name=recommendation.name,
+        agent=recommendation,
+        description=recommendation.description,
+        capabilities=recommendation.capabilities,
+    )
+
+    explanation = ExplanationAgent()
+    register_agent(
+        name=explanation.name,
+        agent=explanation,
+        description=explanation.description,
+        capabilities=explanation.capabilities,
+    )
+
+    learning = LearningAgent()
+    register_agent(
+        name=learning.name,
+        agent=learning,
+        description=learning.description,
+        capabilities=learning.capabilities,
+    )
+
+
