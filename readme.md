@@ -1,66 +1,122 @@
 # Intelligent Next Best Action Platform
 
-A reusable, agentic decision-intelligence platform that transforms customer interactions and enterprise knowledge into explainable, confidence-scored next best action recommendations — with human-in-the-loop approval and continuous learning from feedback.
+A reusable, configuration-driven **Decision Intelligence Platform** that turns customer interactions and enterprise knowledge into explainable, confidence-scored next best action recommendations — with human-in-the-loop approval and continuous learning from feedback.
 
 Built for the XLVentures.AI Hackathon.
 
 ---
 
-## Why this is a platform, not a chatbot
+## Core idea
 
-Most "next best action" demos are a single RAG call wearing a trench coat. This system is built around a **dynamic planner** that decides, per interaction, which specialized agents to invoke and in what order — and a **plug-and-play agent/tool registry** so new capabilities can be added via config, with no code changes. Every recommendation carries a structured evidence graph and a computed (not asserted) confidence score, and every human decision is written back into memory to improve future recommendations.
+This is a **platform**, not an autonomous AI employee and not a chatbot. The pipeline is intentionally simple:
+
+```
+Input data → Understand context → Reason about the business situation →
+Generate options → Recommend next action → Explain why → Human approval → Learn
+```
+
+The differentiator isn't agent count — the brief asks for a planner that *dynamically orchestrates specialized agents*, not a fixed roster of twenty. We deliberately use **five** specialized agents behind a dynamic planner, and prove extensibility by running the same platform across **two domain packs** (no code changes) rather than by stacking more agents.
 
 ---
 
-## Architecture overview
-
-The platform is organized as a 12-stage pipeline, wrapped by cross-cutting registries and observability layers.
+## Architecture
 
 ```
- 1.  Customer interaction   → multi-source ingestion (notes, email, CRM, transcripts, chat)
- 2.  Planner agent          → intent understanding, task decomposition, agent selection, plan + reasoning
- 3.  Execution engine        → orchestrates agents/tools: parallel execution, retries, fallbacks, result aggregation
- 4.  Parallel agents         → 4A episodic recall · 4B context retrieval (RAG) · 4C conflict detection
- 5.  Risk & opportunity synthesis → risk analysis, opportunity detection, gap identification, signal extraction
- 6.  Candidate generation    → multiple ranked next-best-action candidates
- 7.  Arbiter agent           → scores and ranks candidates on business value, feasibility, confidence
- 8.  Reflection & confidence check → validates evidence sufficiency; triggers a replan loop if insufficient
- 9.  Explanation agent       → evidence graph, reasoning trace, source links, confidence score
-10.  Human review & approval → approve / edit / request more info / reject, with feedback captured
-11.  Memory writeback        → interaction memory, outcome memory, decision history, preference learning
-12.  Workflow templates      → reusable, domain-agnostic workflows (Sales, Customer Success, HR, IT Support, Energy/Ops, ...)
+                       Frontend
+                          │
+                          ▼
+                 Configuration Hub
+   (Domain Packs · Business Rules · Workflow Templates ·
+    Personas · Policies · KPIs)
+                          │
+                          ▼
+                   Planner Agent
+                          │
+                          ▼
+                  Execution Engine
+                          │
+        ┌─────────────────┼─────────────────┐
+        ▼                 ▼                 ▼
+  Agent Registry     Tool Registry      Memory Layer
+        │
+        ▼
+┌───────────┬────────────┬────────────────┬─────────────┬────────────┐
+│  Context  │ Reasoning  │ Recommendation │ Explanation │  Learning  │
+│   Agent   │   Agent    │     Agent      │    Agent    │   Agent    │
+└───────────┴────────────┴────────────────┴─────────────┴────────────┘
+                          │
+                          ▼
+                  Human Approval
+                          │
+                          ▼
+                  Memory Writeback
 ```
 
-### Cross-cutting layers
+Observability and an audit trail wrap the whole pipeline (every planner decision, agent call, and human action is traced and logged).
 
-| Layer | Purpose |
+### The five agents
+
+| Agent | Responsibilities |
 |---|---|
-| **Config & rule engine** | Business rules, personas/ICP, workflows, guardrails, model routing — all without code changes |
-| **Agent registry** | Plug-and-play specialized agents (CRM, Email, Meeting, Knowledge, Search, Risk, Opportunity, Contract, ...) |
-| **Tool registry** | Reusable tools shared across agents (vector search, SQL, web search, email/send, Slack, file system, code executor, ...) |
-| **Observability & monitoring** | Agent tracing (execution graph), latency/performance, success/failure rates, token cost, cache hit rates, model usage, alerts, dashboards |
-| **Cost & model optimization** | Cost-aware routing between cheap and powerful models per task complexity, with a cost estimator and budget guardrails |
-| **Audit trail & replay** | Full transparency log of planner decisions, agent outputs, tool calls, results, and human feedback — with execution replay |
+| **Context** | Ingest interactions (notes, email, CRM, transcripts); retrieve enterprise knowledge; gather historical context |
+| **Reasoning** | Identify risks, opportunities, and missing information; prioritize signals |
+| **Recommendation** | Generate candidate next actions; rank them |
+| **Explanation** | Produce evidence, confidence score, and reasoning trace |
+| **Learning** | Memory writeback; incorporate human feedback into future scoring |
 
-### Replan loop
+The planner decides at runtime which of these to invoke and in what order, based on the interaction it's classifying — that dynamic routing, not the agent count, is what's being graded under "quality of agentic AI architecture."
 
-If the reflection step determines evidence is insufficient, the system requests more information or invokes additional agents rather than forcing a low-confidence recommendation through. This loop is what separates "the model answered" from "the system knows it doesn't know yet."
+### Configuration Hub
 
-### Learning loop
-
-Every approval, edit, or rejection at the human review stage is captured and written back into interaction memory, outcome memory, decision history, and preference learning — closing the loop so the platform's recommendations improve over time rather than staying static.
+Everything that changes between business domains lives here, not in code: domain packs, business rules, workflow templates, personas, policies, KPIs. Switching domains is a configuration swap, not a redeploy.
 
 ---
 
-## Key differentiators
+## Key differentiator: domain packs, not more agents
 
-- **Dynamic planning, not a fixed graph** — the planner agent constructs the execution path per interaction based on intent, not a hardcoded sequence.
-- **Multi-tier memory** — episodic (past cases), semantic (org knowledge/RAG), and a learning loop that feeds outcomes back into future decisions.
-- **Computed confidence, not asserted confidence** — confidence scores derive from evidence sufficiency, source agreement, and historical outcomes, surfaced via reflection and an explanation agent.
-- **Conflict detection** — a dedicated agent flags contradictions across sources (e.g., CRM stage vs. meeting notes) before a recommendation is made.
-- **Ranked alternatives, not a single guess** — candidate generation produces multiple options; the arbiter agent justifies the winner against the field.
-- **True extensibility** — new agents, tools, and workflow templates are added through the registries and config layer, with no code changes required.
-- **Full auditability** — every planner decision, agent output, tool call, and human action is logged and replayable.
+The single most convincing proof that this is a *platform* rather than a use-case demo: run the same five agents and the same planner against a second domain pack, live, with no code change. A single-domain demo reads as "they built a Customer Success app." Two domains on the same platform reads as "they built a platform" — that distinction is the whole point of this section.
+
+- **Primary domain pack (fully implemented):** Customer Success — renewal risk / expansion intelligence.
+- **Second domain pack (lightweight, extensibility proof only):** Staffing/Recruitment.
+
+The two packs are structurally identical; only configuration differs:
+
+| Customer Success | Recruitment |
+|---|---|
+| Customer | Candidate |
+| Meeting transcript | Interview transcript |
+| CRM | ATS |
+| Churn risk | Candidate drop-off risk |
+| Upsell opportunity | Fast-track opportunity |
+| Executive meeting | Hiring manager call |
+| Renewal | Hiring decision |
+
+**Sample outputs, same architecture:**
+
+```
+Customer Success → Risk: renewal probability low. Next action: schedule executive call. Confidence: 91%.
+Recruitment      → Risk: candidate may decline offer. Next action: fast-track offer + schedule hiring manager call. Confidence: 88%.
+```
+
+The Recruitment pack is intentionally minimal: config + 2-3 sample records + one workflow (Screening → Offer) + one clean end-to-end recommendation. It exists to prove extensibility, not to be judged on business depth — that's what the Customer Success pack is for.
+
+If this swap works cleanly live in the demo, it's a stronger signal of "real platform" than any number of additional agents would be.
+
+---
+
+## Rubric alignment
+
+| Requirement | How it's satisfied |
+|---|---|
+| Dynamic planner orchestration | Planner Agent + Execution Engine, runtime agent selection |
+| Reusable agents and tools | Agent Registry + Tool Registry |
+| Shared memory | Memory Layer (semantic + episodic) |
+| Multi-source retrieval | Context Agent |
+| Explainable recommendations | Explanation Agent (evidence + confidence + reasoning trace) |
+| Configurable workflows | Configuration Hub |
+| Extensible framework | Domain Packs + Registries — proven via the two-domain-pack demo |
+| Human-in-the-loop | Human Approval stage |
+| Learning from interactions | Learning Agent + Memory Writeback |
 
 ---
 
@@ -69,7 +125,7 @@ Every approval, edit, or rejection at the human review stage is captured and wri
 | Component | Choice |
 |---|---|
 | Orchestration | LangGraph |
-| LLMs | Claude (Sonnet for synthesis/arbitration/explanation, Haiku for classification/routing — cost-aware routing) |
+| LLMs | Claude (Sonnet for reasoning/recommendation/explanation, Haiku for classification/routing — cost-aware routing) |
 | Vector store | ChromaDB (local, embedded) |
 | Memory / state store | SQLite (episodic memory, decision history) |
 | Backend | FastAPI (Python end-to-end) |
@@ -82,17 +138,14 @@ Every approval, edit, or rejection at the human review stage is captured and wri
 
 ```
 .
-├── agents/              # Planner, episodic recall, context retrieval, conflict detection,
-│                         # risk/opportunity synthesis, candidate generation, arbiter, explanation
-├── tools/                # Reusable tool implementations (CRM, vector search, web search, etc.)
-├── registry/             # Agent registry + tool registry configs (plug-and-play)
-├── config/                # Business rules, personas/ICP, workflow templates, guardrails
-├── memory/                 # Episodic, semantic, decision history, preference learning stores
-├── workflows/               # Domain workflow templates (Sales, CS, HR, IT Support, Energy/Ops)
-├── observability/             # Tracing, dashboards, cost/budget monitoring
-├── ui/                          # Human review & approval interface
-├── data/                         # Synthetic CRM records, transcripts, playbooks for the demo
-├── docs/                          # Architecture diagrams and design notes
+├── agents/              # context, reasoning, recommendation, explanation, learning
+├── tools/                # reusable tool implementations (CRM, vector search, web search, etc.)
+├── registry/             # agent registry + tool registry configs (plug-and-play)
+├── config/                 # domain packs, business rules, workflow templates, personas, policies, KPIs
+├── memory/                  # semantic, episodic, decision history stores
+├── ui/                        # frontend (Streamlit): config hub, recommendation view, approval, dashboard
+├── data/                        # synthetic CRM records, transcripts, playbooks for each domain pack
+├── docs/                          # architecture diagrams and design notes
 └── README.md
 ```
 
@@ -118,7 +171,7 @@ streamlit run app.py
 
 ## Demo business use case
 
-**Domain:** B2B SaaS Customer Success — Renewal Risk & Expansion Intelligence.
+**Primary domain pack: B2B SaaS Customer Success — Renewal Risk & Expansion Intelligence**
 
 **Decision points:**
 - Renewal at risk (usage drop, sentiment decline, support tickets up)
@@ -131,14 +184,26 @@ streamlit run app.py
 - Risk-catch lead time (days before renewal flagged vs. human baseline)
 - Simulated NRR impact (accepted upsell recs × assumed expansion value)
 
+**Second domain pack (lightweight extensibility proof):** Staffing/Recruitment — Screening → Offer workflow only, 2-3 synthetic candidate/job records, not built to the same depth as Customer Success. See "Key differentiator" section above for the entity mapping.
+
 ---
 
 ## Evaluation alignment
 
 | Criteria | Weight | Where it shows up |
 |---|---|---|
-| Agentic AI architecture quality | 70% (platform) | Dynamic planner, execution engine, agent/tool registries |
-| Reusability & extensibility | | Plug-and-play registries, config-driven workflow templates |
-| Memory & orchestration design | | Episodic + semantic memory, reflection/replan loop, writeback |
-| User experience | | Human review & approval interface |
-| Business use case understanding & outcomes | 30% (business) | Domain definition, recommendation quality, measurable metrics |
+| Agentic AI architecture quality | 70% (platform) | Dynamic planner, execution engine, five-agent registry |
+| Reusability & extensibility | | Domain packs (two domains, no code change), config hub |
+| Memory & orchestration design | | Memory layer, learning agent, writeback loop |
+| User experience | | Human approval interface, observability dashboard |
+| Business use case understanding & outcomes | 30% (business) | CS domain definition, recommendation quality, measurable metrics |
+
+---
+
+## Team
+
+> _Names / roles here._
+
+## License
+
+> _TBD._
