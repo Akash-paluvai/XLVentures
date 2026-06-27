@@ -55,6 +55,17 @@ def print_recommendation_details(rec: dict) -> None:
 
 
 def main():
+    # Step 0: Clear memory for isolation
+    from backend.memory.episodic import clear_domain_memory
+    from backend.memory.semantic import _get_collection
+    
+    clear_domain_memory("customer_success")
+    try:
+        col = _get_collection("customer_success")
+        col.delete(ids=["learned_heuristics"])
+    except Exception:
+        pass
+
     # Step 1: Bootstrap agents
     bootstrap_agents()
 

@@ -233,10 +233,88 @@ First real agent in the platform. Class-based with `.run(input_data)` method.
 
 ---
 
-## What's Next — Shift 4
+## Shift 4 — Reasoning Agent + Recommendation Agent ✅
+
+**Date:** 2026-06-27 | **Duration:** ~1.5 hours
+
+### What was built
+
+#### Reasoning Agent (`backend/agents/reasoning_agent.py`)
+- Standardized class conforming to `AgentSpec`.
+- LLM execution via OpenRouter (`google/gemma-3-27b-it:free`).
+- Heuristic fallback logic for Customer Success & Recruitment domains, extracting risks, opportunities, conflicts, and missing information.
+
+#### Recommendation Agent (`backend/agents/recommendation_agent.py`)
+- Standardized class conforming to `AgentSpec`.
+- Generates exactly 3 ranked `CandidateAction` options with confidence/value/feasibility.
+- Custom fallback action plans mapped to context playbooks (Renewal, Escalation, Champion Change, Upsell, Screening, Dropout).
+
+#### Pipeline Verification Script (`backend/scripts/test_pipeline_partial.py`)
+- Executed sequential Context ➔ Reasoning ➔ Recommendation routing.
+- Printed complete metadata, summaries, candidate actions, and rejection justifications.
+
+### Verification
+- `test_pipeline_partial.py`: ✅ Runs successfully across both domains, logging correct rejections.
+
+---
+
+## Shift 5 — Explanation Agent + Learning Agent + computed confidence ✅
+
+**Date:** 2026-06-27 | **Duration:** ~1.5 hours
+
+### What was built
+
+#### Explanation Agent (`backend/agents/explanation_agent.py`)
+- Computes logical confidence scores mathematically (baseline from evidence count, source agreement score, and historical human feedback approval rates).
+- Compiles the chronological `reasoning_trace`.
+
+#### Learning Agent (`backend/agents/learning_agent.py`)
+- Persists final recommendations and human outcome feedback into episodic SQLite memory.
+- Reflection job (`run_reflection()`) aggregates statistics, identifies rejection trends, and writes learned heuristics back into ChromaDB (semantic memory).
+
+#### Loop Ingestion & Full Pipeline Script (`backend/scripts/test_pipeline_full.py`)
+- Configured memory manager to check for and append `learned_heuristics` playbooks.
+- Script validates entire pipeline, mock outcome writeback, reflection generation, and closed-loop retrieval.
+
+### Verification
+- `test_pipeline_full.py`: ✅ Closed-loop learning verified. Dynamically aggregates rejections and retrieves `learned_heuristics` on subsequent runs.
+- `test_memory.py`: ✅ 9/9 tests pass.
+- `test_context_agent.py`: ✅ 8/8 tests pass.
+
+---
+
+## Shift 6 — Planner Agent + LangGraph wiring ✅
+
+**Date:** 2026-06-27 | **Duration:** ~1.5 hours
+
+### What was built
+
+#### LangGraph StateGraph (`backend/core/planner.py`)
+- Implemented LangGraph `StateGraph` using `PlatformState`.
+- Implements `planner_node` (routing path classifier) and agent execution nodes.
+- Configured checkpointer `MemorySaver` and paused the graph before the Human Approval Gate using `interrupt_before=["human_approval_node"]`.
+
+#### Conditional Orchestration Edges
+- Escalation path (Urgent signals): runs `context` ➔ `reasoning` ➔ `recommendation` ➔ `explanation` ➔ `human_approval`.
+- Standard path (Routine signals): runs `context` ➔ `generate_standard_recommendation` (bypassing reasoning/recommendation) ➔ `explanation` ➔ `human_approval`.
+
+#### FastAPI API Updates (`backend/api/main.py`)
+- Added `POST /api/v1/recommend` to start thread and run up to the interrupt point.
+- Added `POST /api/v1/approve` to update thread state with human feedback and resume execution.
+
+#### Graph Verification Script (`backend/scripts/test_graph.py`)
+- Validates escalation and standard path conditional splits and resumption behavior.
+
+### Verification
+- `test_graph.py`: ✅ All LangGraph routing and checkpointer resumption tests pass.
+
+---
+
+## What's Next — Shift 7
 
 The next shift will implement:
-- **Reasoning Agent** — risk/opportunity/conflict identification from Context Agent output
-- **Recommendation Agent** — ranked CandidateAction generation
+- **React UI** — recommendation view with HITL approval controls.
+- Paused graph resume and outcome dashboard integrations.
 
 See `todo.md` for the full remaining build plan.
+

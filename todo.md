@@ -66,35 +66,36 @@ Deadline: Mon June 29 EOD. Today: Sat June 27. Budget: 9 shifts, alternating Per
 
 ---
 
-## Shift 4 (Person B) — Reasoning Agent + Recommendation Agent ⬜ PENDING
+## Shift 4 (Person B) — Reasoning Agent + Recommendation Agent ✅ COMPLETE
 
 **Goal:** the two middle agents, working standalone against Context Agent's output.
 
-- [ ] `agents/reasoning_agent.py`: takes Context Agent output, calls LLM to identify risks/opportunities/missing info/conflicts
-- [ ] `agents/recommendation_agent.py`: takes Reasoning Agent output, generates 3 `CandidateAction`s, ranks them
-- [ ] Register both in `agent_registry.py`
-- [ ] Test script `scripts/test_pipeline_partial.py` chaining Context → Reasoning → Recommendation
+- [x] `agents/reasoning_agent.py`: takes Context Agent output, calls LLM to identify risks/opportunities/missing info/conflicts
+- [x] `agents/recommendation_agent.py`: takes Reasoning Agent output, generates 3 `CandidateAction`s, ranks them
+- [x] Register both in `agent_registry.py`
+- [x] Test script `scripts/test_pipeline_partial.py` chaining Context → Reasoning → Recommendation
 
 **Definition of done:** test script prints 3 ranked candidates with rejection reasons for at least one account. Commit + push.
 
 ---
 
-## Shift 5 (Person A) — Explanation Agent + Learning Agent + computed confidence ⬜ PENDING
+## Shift 5 (Person A) — Explanation Agent + Learning Agent + computed confidence ✅ COMPLETE
 
-- [ ] `agents/explanation_agent.py`: builds `EvidenceNode[]`, reasoning trace, `ComputedConfidence`
-- [ ] `agents/learning_agent.py`: `write_outcome()` + `run_reflection()` for memory writeback
-- [ ] Register both agents
-- [ ] Extend test pipeline to run all 5 agents in sequence
+- [x] `agents/explanation_agent.py`: builds `EvidenceNode[]`, reasoning trace, `ComputedConfidence`
+- [x] `agents/learning_agent.py`: `write_outcome()` + `run_reflection()` for memory writeback
+- [x] Register both agents
+- [x] Extend test pipeline to run all 5 agents in sequence
 
 ---
 
-## Shift 6 (Person B) — Planner Agent + LangGraph wiring ⬜ PENDING
+## Shift 6 (Person B) — Planner Agent + LangGraph wiring ✅ COMPLETE
 
-- [ ] `core/planner.py`: LangGraph `StateGraph` with `PlatformState`
-- [ ] Planner node: Claude (Haiku) classification of decision points
-- [ ] Conditional edges based on classification
-- [ ] `interrupt()` for human approval
-- [ ] LangSmith tracing
+- [x] `core/planner.py`: LangGraph `StateGraph` with `PlatformState`
+- [x] Planner node: Claude (Haiku) classification of decision points
+- [x] Conditional edges based on classification
+- [x] `interrupt()` for human approval
+- [x] LangSmith tracing
+
 
 ---
 
