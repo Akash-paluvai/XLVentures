@@ -1,0 +1,25 @@
+{
+  "id": "recruitment",
+  "name": "Staffing and Recruitment",
+  "description": "Staffing and Recruitment domain pack for screening and offer workflows in candidate hiring pipelines.",
+  "entities": [
+    "Candidate",
+    "Job",
+    "Interview"
+  ],
+  "workflows": [
+    "Screening",
+    "Offer"
+  ],
+  "decision_points": [
+    "candidate_dropoff_risk",
+    "fast_track_opportunity"
+  ],
+  "business_rules": [],
+  "success_metrics": [
+    "time_to_hire"
+  ],
+  "tools": [],
+  "prompt_overrides": {},
+  "metadata": {}
+}

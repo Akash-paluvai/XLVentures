@@ -6,6 +6,24 @@ Built for the XLVentures.AI Hackathon.
 
 ---
 
+## Current Status
+
+| Shift | Description | Status |
+|---|---|---|
+| **Shift 1** | Project Scaffolding & Data Contracts | ✅ Complete |
+| **Shift 2** | Memory Layer & Tool Registry | ✅ Complete |
+| **Shift 3** | Context Agent | ✅ Complete |
+| Shift 4 | Reasoning Agent + Recommendation Agent | ⬜ Pending |
+| Shift 5 | Explanation Agent + Learning Agent | ⬜ Pending |
+| Shift 6 | Planner Agent + LangGraph Wiring | ⬜ Pending |
+| Shift 7 | React UI: Recommendation View + HITL | ⬜ Pending |
+| Shift 8 | Configuration Hub UI + Domain Pack Switch | ⬜ Pending |
+| Shift 9 | Polish, Reflection, Demo Prep | ⬜ Pending |
+
+See [PROGRESS.md](PROGRESS.md) for detailed change log.
+
+---
+
 ## Core idea
 
 This is a **platform**, not an autonomous AI employee and not a chatbot. The pipeline is intentionally simple:
@@ -56,13 +74,13 @@ Observability and an audit trail wrap the whole pipeline (every planner decision
 
 ### The five agents
 
-| Agent | Responsibilities |
-|---|---|
-| **Context** | Ingest interactions (notes, email, CRM, transcripts); retrieve enterprise knowledge; gather historical context |
-| **Reasoning** | Identify risks, opportunities, and missing information; prioritize signals |
-| **Recommendation** | Generate candidate next actions; rank them |
-| **Explanation** | Produce evidence, confidence score, and reasoning trace |
-| **Learning** | Memory writeback; incorporate human feedback into future scoring |
+| Agent | Responsibilities | Status |
+|---|---|---|
+| **Context** | Ingest interactions; retrieve enterprise knowledge; gather historical context | ✅ Implemented |
+| **Reasoning** | Identify risks, opportunities, and missing information; prioritize signals | ⬜ Pending |
+| **Recommendation** | Generate candidate next actions; rank them | ⬜ Pending |
+| **Explanation** | Produce evidence, confidence score, and reasoning trace | ⬜ Pending |
+| **Learning** | Memory writeback; incorporate human feedback into future scoring | ⬜ Pending |
 
 The planner decides at runtime which of these to invoke and in what order, based on the interaction it's classifying — that dynamic routing, not the agent count, is what's being graded under "quality of agentic AI architecture."
 
@@ -74,7 +92,7 @@ Everything that changes between business domains lives here, not in code: domain
 
 ## Key differentiator: domain packs, not more agents
 
-The single most convincing proof that this is a *platform* rather than a use-case demo: run the same five agents and the same planner against a second domain pack, live, with no code change. A single-domain demo reads as "they built a Customer Success app." Two domains on the same platform reads as "they built a platform" — that distinction is the whole point of this section.
+The single most convincing proof that this is a *platform* rather than a use-case demo: run the same five agents and the same planner against a second domain pack, live, with no code change.
 
 - **Primary domain pack (fully implemented):** Customer Success — renewal risk / expansion intelligence.
 - **Second domain pack (lightweight, extensibility proof only):** Staffing/Recruitment.
@@ -91,46 +109,25 @@ The two packs are structurally identical; only configuration differs:
 | Executive meeting | Hiring manager call |
 | Renewal | Hiring decision |
 
-**Sample outputs, same architecture:**
-
-```
-Customer Success → Risk: renewal probability low. Next action: schedule executive call. Confidence: 91%.
-Recruitment      → Risk: candidate may decline offer. Next action: fast-track offer + schedule hiring manager call. Confidence: 88%.
-```
-
-The Recruitment pack is intentionally minimal: config + 2-3 sample records + one workflow (Screening → Offer) + one clean end-to-end recommendation. It exists to prove extensibility, not to be judged on business depth — that's what the Customer Success pack is for.
-
-If this swap works cleanly live in the demo, it's a stronger signal of "real platform" than any number of additional agents would be.
-
----
-
-## Rubric alignment
-
-| Requirement | How it's satisfied |
-|---|---|
-| Dynamic planner orchestration | Planner Agent + Execution Engine, runtime agent selection |
-| Reusable agents and tools | Agent Registry + Tool Registry |
-| Shared memory | Memory Layer (semantic + episodic) |
-| Multi-source retrieval | Context Agent |
-| Explainable recommendations | Explanation Agent (evidence + confidence + reasoning trace) |
-| Configurable workflows | Configuration Hub |
-| Extensible framework | Domain Packs + Registries — proven via the two-domain-pack demo |
-| Human-in-the-loop | Human Approval stage |
-| Learning from interactions | Learning Agent + Memory Writeback |
+Both domain packs already have:
+- ✅ Domain configuration JSONs
+- ✅ Synthetic data records
+- ✅ Playbooks seeded into ChromaDB
+- ✅ Dynamic retrieval proven via Context Agent
 
 ---
 
 ## Tech stack
 
-| Component | Choice |
-|---|---|
-| Orchestration | LangGraph |
-| LLMs | Claude (Sonnet for reasoning/recommendation/explanation, Haiku for classification/routing — cost-aware routing) |
-| Vector store | ChromaDB (local, embedded) |
-| Memory / state store | SQLite (episodic memory, decision history) |
-| Backend | FastAPI (Python end-to-end) |
-| Frontend | Streamlit |
-| Observability | LangSmith |
+| Component | Choice | Status |
+|---|---|---|
+| Orchestration | LangGraph | ⬜ Not yet wired |
+| LLMs | OpenRouter (Gemma 3 27B free tier) | ✅ Optional synthesis ready |
+| Vector store | ChromaDB (local, embedded, all-MiniLM-L6-v2) | ✅ Operational |
+| Memory / state store | SQLite (SQLAlchemy ORM) | ✅ Operational |
+| Backend | FastAPI (Python) | ✅ Running |
+| Frontend | React (Vite) | ✅ Running |
+| Observability | LangSmith | ⬜ Not yet wired |
 
 ---
 
@@ -138,34 +135,100 @@ If this swap works cleanly live in the demo, it's a stronger signal of "real pla
 
 ```
 .
-├── agents/              # context, reasoning, recommendation, explanation, learning
-├── tools/                # reusable tool implementations (CRM, vector search, web search, etc.)
-├── registry/             # agent registry + tool registry configs (plug-and-play)
-├── config/                 # domain packs, business rules, workflow templates, personas, policies, KPIs
-├── memory/                  # semantic, episodic, decision history stores
-├── ui/                        # frontend (Streamlit): config hub, recommendation view, approval, dashboard
-├── data/                        # synthetic CRM records, transcripts, playbooks for each domain pack
-├── docs/                          # architecture diagrams and design notes
-└── README.md
+├── backend/
+│   ├── agents/                # Agent implementations
+│   │   ├── context_agent.py   # ✅ Context retrieval agent
+│   │   └── query_builder.py   # ✅ Query construction module
+│   ├── api/
+│   │   └── main.py            # ✅ FastAPI entrypoint + routes
+│   ├── config/
+│   │   └── domain_packs/
+│   │       ├── customer_success.json   # ✅ CS domain config
+│   │       └── recruitment.json        # ✅ Recruitment domain config
+│   ├── core/
+│   │   ├── schemas.py         # ✅ All Pydantic data contracts
+│   │   ├── settings.py        # ✅ Platform settings (DB paths, etc.)
+│   │   ├── state.py           # ✅ PlatformState TypedDict
+│   │   └── config_loader.py   # ✅ Domain-agnostic data loader
+│   ├── data/
+│   │   ├── customer_success/
+│   │   │   ├── accounts.json  # ✅ 5 synthetic CS accounts
+│   │   │   └── playbooks/     # ✅ 5 playbook MDs
+│   │   └── recruitment/
+│   │       ├── candidates.json # ✅ 3 synthetic candidates
+│   │       └── playbooks/      # ✅ 3 playbook MDs
+│   ├── memory/
+│   │   ├── episodic.py        # ✅ SQLite-backed recommendation/feedback store
+│   │   ├── semantic.py        # ✅ ChromaDB vector store for playbooks
+│   │   └── manager.py         # ✅ Unified MemoryManager interface
+│   ├── registry/
+│   │   ├── agent_registry.py  # ✅ Agent registration + bootstrap
+│   │   └── tool_registry.py   # ✅ Tool registration + bootstrap
+│   ├── scripts/
+│   │   ├── seed_memory.py     # ✅ Domain-agnostic playbook seeder
+│   │   ├── test_memory.py     # ✅ 9 memory integration tests
+│   │   └── test_context_agent.py  # ✅ Context agent dynamic test
+│   └── docs/
+├── frontend/                  # Vite React dashboard
+│   ├── src/
+│   │   ├── components/        # Domain selector, account cards, etc.
+│   │   ├── pages/             # Page components
+│   │   ├── services/          # API service layer
+│   │   └── App.jsx            # Main application
+│   └── package.json
+├── PROGRESS.md                # Detailed implementation log
+├── readme.md                  # This file
+├── todo.md                    # Shift-based build plan
+└── requirements.txt
 ```
 
 ---
 
 ## Getting started
 
-```bash
-git clone <repo-url>
-cd <repo-name>
+### Prerequisites
 
+- Python 3.11+
+- Node.js 18+
+
+### Backend Setup
+```bash
+# Initialize and activate virtual environment
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# configure environment variables: ANTHROPIC_API_KEY, LANGSMITH_API_KEY, etc.
+# Configure environment variables
 cp .env.example .env
 
-# run the platform
-streamlit run app.py
+# Seed memory (first run downloads ~80MB embedding model)
+PYTHONPATH=. python backend/scripts/seed_memory.py
+
+# Run memory tests (optional verification)
+PYTHONPATH=. python backend/scripts/test_memory.py
+
+# Run context agent tests (optional verification)
+PYTHONPATH=. python backend/scripts/test_context_agent.py
+
+# Start the backend FastAPI server
+PYTHONPATH=. uvicorn backend.api.main:app --reload --port 8000
 ```
+
+### Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `OPENROUTER_API_KEY` | Optional | Enables LLM synthesis in Context Agent |
+| `ENABLE_CONTEXT_SYNTHESIS` | Optional | Set to `true` to activate LLM synthesis (default: `false`) |
+| `LANGSMITH_API_KEY` | Optional | Enables LangSmith tracing |
+| `LANGCHAIN_TRACING_V2` | Optional | Set to `true` for tracing |
+| `LANGCHAIN_PROJECT` | Optional | LangSmith project name |
 
 ---
 
@@ -179,12 +242,7 @@ streamlit run app.py
 - Escalation needing CSM follow-up (unresolved negative support interaction)
 - Champion/stakeholder change risk (key contact gone quiet or left)
 
-**Success metrics:**
-- Recommendation acceptance rate (approve / edit / reject ratio)
-- Risk-catch lead time (days before renewal flagged vs. human baseline)
-- Simulated NRR impact (accepted upsell recs × assumed expansion value)
-
-**Second domain pack (lightweight extensibility proof):** Staffing/Recruitment — Screening → Offer workflow only, 2-3 synthetic candidate/job records, not built to the same depth as Customer Success. See "Key differentiator" section above for the entity mapping.
+**Second domain pack (lightweight extensibility proof):** Staffing/Recruitment — Screening → Offer workflow only, 3 synthetic candidate records + 3 playbooks, proving the platform is domain-agnostic.
 
 ---
 
