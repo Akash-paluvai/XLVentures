@@ -99,28 +99,26 @@ Deadline: Mon June 29 EOD. Today: Sat June 27. Budget: 9 shifts, alternating Per
 
 ---
 
-## Shift 7 (Person A) — React UI: recommendation view + HITL approval ⬜ PENDING
-
-- [ ] Recommendation view with ranked candidates
-- [ ] Approve / Edit / Request more info / Reject buttons
-- [ ] Wire to paused graph + memory writeback
-
----
-
-## Shift 8 (Person B) — Configuration Hub UI + second domain pack ⬜ PENDING
-
-- [ ] DomainSelector component for live domain switching
-- [ ] Run recruitment candidate through full pipeline
-- [ ] Observability/metrics panel
+## Shift 7 (Person A) — React UI: recommendation view + HITL approval ✅ COMPLETE
+- [x] Recommendation view with ranked candidates
+- [x] Approve / Edit / Request more info / Reject buttons
+- [x] Wire to paused graph + memory writeback
 
 ---
 
-## Shift 9 (Person A) — Buffer: polish, reflection button, README/demo prep ⬜ PENDING
+## Shift 8 (Person B) — Configuration Hub UI + second domain pack ✅ COMPLETE
+- [x] DomainSelector component for live domain switching
+- [x] Run recruitment candidate through full pipeline
+- [x] Observability/metrics panel
 
-- [ ] Wire reflection button
-- [ ] Demo script + runbook
-- [ ] Record demo videos
-- [ ] Final commit + push
+---
+
+## Shift 9 (Person A) — Buffer: polish, reflection button, README/demo prep ✅ COMPLETE
+- [x] Wire reflection button
+- [x] Demo script + runbook
+- [x] Record demo videos
+- [x] Final commit + push
+
 
 ---
 

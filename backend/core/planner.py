@@ -19,6 +19,10 @@ from backend.registry.agent_registry import get_agent
 
 logger = logging.getLogger(__name__)
 
+# In-memory trace storage (acceptable for hackathon scope)
+planner_traces: Dict[str, Any] = {}
+
+
 # ---------------------------------------------------------------------------
 # OpenRouter configuration for classification (optional)
 # ---------------------------------------------------------------------------

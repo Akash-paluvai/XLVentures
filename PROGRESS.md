@@ -310,11 +310,35 @@ First real agent in the platform. Class-based with `.run(input_data)` method.
 
 ---
 
-## What's Next — Shift 7
+## Shift 7 — React UI + Human-in-the-Loop ✅
 
-The next shift will implement:
-- **React UI** — recommendation view with HITL approval controls.
-- Paused graph resume and outcome dashboard integrations.
+**Date:** 2026-06-27 | **Duration:** ~2 hours
 
-See `todo.md` for the full remaining build plan.
+### What was built
+
+#### Backend API Extensions (`backend/api/main.py`)
+- **`GET /api/v1/history`**: Queries past recommendations & human feedback outcomes from SQLite.
+- **`GET /api/v1/heuristics`**: Fetches generated continuous learning heuristics from ChromaDB.
+- **`GET /api/v1/trace`**: Exposes the path classification, timestamps, and state per thread in-memory (`planner_traces`).
+
+#### UI Pages and Components (`frontend/src/`)
+- **App Shell Refactoring**: Componentized the monolith into standalone components and pages utilizing `react-router-dom`.
+- **Pages**:
+  - `RecommendPage.jsx`: Selection of accounts/candidates, running the decision pipeline, inspecting SVG circular confidence badge, checking candidate next-best actions with rejection rationale, browsing expandable evidence accordions, and managing HITL approval decisions.
+  - `MemoryPage.jsx`: Explores historical recommendation cards, human comments, and mined reflection heuristics.
+  - `TracePage.jsx`: Visually displays classification routes, timelines, durations, and state transitions.
+- **Components**:
+  - `Navbar`: Global navigation.
+  - `AccountSelector`: Renders client profiles safely (fixed the recruitment domain stage null-safety crash).
+  - `PipelineStatus`: Visualizes the LangGraph node execution trail.
+  - `CandidateCards`: Displays selected action card, custom modal overlay for edits/feedback, and reject comments.
+  - `EvidenceAccordion`: Shows raw context content.
+  - `ConfidenceBadge`: SVG circular dial.
+  - `ApprovalButtons`: Core decision gate controls.
+  - `TraceTimeline`: Chronological agent trace.
+
+### Verification
+- **E2E Playthrough**: Verified domain switches (Customer Success ➔ Recruitment), full pipeline execution, feedback/reject requirement validation, and custom modal edits.
+- **Memory/Trace Updates**: Confirmed that decisions immediately persist in SQLite and traces are visible in the Trace dashboard.
+- **Build Cleanliness**: Production Vite bundle (`npm run build`) compiles successfully.
 
