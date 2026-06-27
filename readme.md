@@ -66,17 +66,15 @@ Every approval, edit, or rejection at the human review stage is captured and wri
 
 ## Tech stack
 
-> _Fill in as decisions are finalized._
-
 | Component | Choice |
 |---|---|
 | Orchestration | LangGraph |
-| LLM(s) | |
-| Vector store | |
-| Memory / state store | |
-| Backend | |
-| Frontend | |
-| Observability | |
+| LLMs | Claude (Sonnet for synthesis/arbitration/explanation, Haiku for classification/routing — cost-aware routing) |
+| Vector store | ChromaDB (local, embedded) |
+| Memory / state store | SQLite (episodic memory, decision history) |
+| Backend | FastAPI (Python end-to-end) |
+| Frontend | Streamlit |
+| Observability | LangSmith |
 
 ---
 
@@ -102,24 +100,36 @@ Every approval, edit, or rejection at the human review stage is captured and wri
 
 ## Getting started
 
-> _Fill in once the implementation is in progress._
-
 ```bash
 git clone <repo-url>
 cd <repo-name>
 
-# install dependencies
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 
-# configure environment variables (API keys, model routing, etc.)
+# configure environment variables: ANTHROPIC_API_KEY, LANGSMITH_API_KEY, etc.
+cp .env.example .env
 
 # run the platform
+streamlit run app.py
 ```
 
 ---
 
 ## Demo business use case
 
-> _Describe the chosen B2B domain, customer journey, decision points, and success metrics here._
+**Domain:** B2B SaaS Customer Success — Renewal Risk & Expansion Intelligence.
+
+**Decision points:**
+- Renewal at risk (usage drop, sentiment decline, support tickets up)
+- Expansion/upsell opportunity (positive sentiment + usage near plan limits)
+- Escalation needing CSM follow-up (unresolved negative support interaction)
+- Champion/stakeholder change risk (key contact gone quiet or left)
+
+**Success metrics:**
+- Recommendation acceptance rate (approve / edit / reject ratio)
+- Risk-catch lead time (days before renewal flagged vs. human baseline)
+- Simulated NRR impact (accepted upsell recs × assumed expansion value)
 
 ---
 
