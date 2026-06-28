@@ -148,7 +148,7 @@ def recommendation_node(state: PlatformState) -> dict:
     out = agent.run({
         "domain_pack_id": state["domain_pack"]["id"],
         "entity": state["account"],
-        "interaction": state["account"]["interaction_notes"],
+        "interaction": state["account"].get("interaction_notes") or state["account"].get("recruiter_notes") or "",
         "retrieved_context": state["retrieved_context"],
         "reasoning_output": state["reasoning_output"],
     })
@@ -259,7 +259,7 @@ def explanation_node(state: PlatformState) -> dict:
     out = agent.run({
         "domain_pack_id": state["domain_pack"]["id"],
         "entity": state["account"],
-        "interaction": state["account"]["interaction_notes"],
+        "interaction": state["account"].get("interaction_notes") or state["account"].get("recruiter_notes") or "",
         "retrieved_context": state["retrieved_context"],
         "reasoning_output": state["reasoning_output"],
         "recommendation_output": state["recommendation_output"],

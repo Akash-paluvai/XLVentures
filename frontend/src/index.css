@@ -882,13 +882,29 @@ body {
 }
 
 .domain-select {
-  background: transparent;
+  background: var(--bg-secondary, #1a1a2e);
   color: #fff;
   border: none;
   font-weight: 600;
   cursor: pointer;
   outline: none;
   font-size: 0.9rem;
+  border-radius: 6px;
+  padding: 2px 4px;
+  appearance: auto;
+}
+
+.domain-select option {
+  background: var(--bg-secondary, #1a1a2e);
+  color: #fff;
+  font-weight: 500;
+}
+
+.domain-select option:hover,
+.domain-select option:focus,
+.domain-select option:checked {
+  background: var(--accent-purple, #8b5cf6);
+  color: #fff;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
