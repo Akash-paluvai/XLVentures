@@ -1,6 +1,9 @@
 import { NavLink } from 'react-router-dom'
+import { useAppStore } from '../store/appStore'
 
-export default function Navbar({ activeDomain, onDomainChange }) {
+export default function Navbar() {
+  const { activeDomain, setActiveDomain } = useAppStore()
+
   return (
     <nav className="navbar">
       <div className="navbar-brand">
@@ -17,6 +20,9 @@ export default function Navbar({ activeDomain, onDomainChange }) {
         <NavLink to="/trace" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>
           📊 Traces
         </NavLink>
+        <NavLink to="/config" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>
+          ⚙️ Configuration
+        </NavLink>
       </div>
 
       <div className="navbar-domain">
@@ -24,7 +30,7 @@ export default function Navbar({ activeDomain, onDomainChange }) {
         <select
           id="domain-select"
           value={activeDomain}
-          onChange={(e) => onDomainChange(e.target.value)}
+          onChange={(e) => setActiveDomain(e.target.value)}
           className="domain-select"
         >
           <option value="customer_success">Customer Success</option>

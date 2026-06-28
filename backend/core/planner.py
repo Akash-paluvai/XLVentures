@@ -48,8 +48,9 @@ def _clean_json_response(content: str) -> dict:
 
 def planner_node(state: PlatformState) -> dict:
     """Classifies the situation as needing 'escalation' or 'standard' processing."""
-    interaction = state.get("account", {}).get("interaction_notes", "") or ""
+    interaction = state.get("account", {}).get("interaction_notes", "") or state.get("account", {}).get("recruiter_notes", "") or ""
     health = state.get("account", {}).get("health_score")
+
     fit_score = state.get("account", {}).get("fit_score")
     
     interaction_lower = interaction.lower()
@@ -120,7 +121,7 @@ def context_node(state: PlatformState) -> dict:
     out = agent.run({
         "domain_pack_id": state["domain_pack"]["id"],
         "entity": state["account"],
-        "interaction": state["account"]["interaction_notes"],
+        "interaction": state["account"].get("interaction_notes") or state["account"].get("recruiter_notes") or "",
     })
     return {
         "retrieved_context": out,
@@ -134,10 +135,11 @@ def reasoning_node(state: PlatformState) -> dict:
     out = agent.run({
         "domain_pack_id": state["domain_pack"]["id"],
         "entity": state["account"],
-        "interaction": state["account"]["interaction_notes"],
+        "interaction": state["account"].get("interaction_notes") or state["account"].get("recruiter_notes") or "",
         "retrieved_context": state["retrieved_context"],
     })
     return {"reasoning_output": out}
+
 
 
 def recommendation_node(state: PlatformState) -> dict:

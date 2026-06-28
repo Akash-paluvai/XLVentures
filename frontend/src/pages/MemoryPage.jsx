@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react'
 import { fetchHistory, fetchHeuristics } from '../services/api'
 
-export default function MemoryPage({ activeDomain }) {
+import { useAppStore } from '../store/appStore'
+
+export default function MemoryPage() {
+  const activeDomain = useAppStore((state) => state.activeDomain)
+
   const [activeTab, setActiveTab] = useState('recommendations')
   const [history, setHistory] = useState([])
   const [heuristics, setHeuristics] = useState([])

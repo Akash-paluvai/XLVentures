@@ -81,3 +81,10 @@ export async function fetchTrace(threadId) {
   if (!res.ok) throw new Error(`Trace failed: ${res.status}`)
   return res.json()
 }
+
+export async function fetchDomainConfig(domainName) {
+  const res = await fetch(`${API_BASE}/domain-config?domain=${domainName}`)
+  if (!res.ok) throw new Error(`Failed to fetch domain config: ${res.status}`)
+  return res.json()
+}
+

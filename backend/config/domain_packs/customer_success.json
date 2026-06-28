@@ -1,6 +1,7 @@
 {
   "id": "customer_success",
   "name": "Customer Success",
+  "version": "1.0",
   "description": "Customer Success domain pack for SaaS account management and renewal intelligence.",
   "entities": [
     "Customer",
@@ -25,6 +26,13 @@
     "customer_health"
   ],
   "tools": [],
-  "prompt_overrides": {},
-  "metadata": {}
+  "prompt_overrides": {
+    "context_agent": "",
+    "reasoning_agent": "Prioritize high expansion opportunities and champion stability.",
+    "recommendation_agent": "",
+    "explanation_agent": ""
+  },
+  "metadata": {
+    "created_by": "system"
+  }
 }

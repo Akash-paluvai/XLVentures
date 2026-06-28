@@ -8,7 +8,11 @@ import EvidenceAccordion from '../components/EvidenceAccordion'
 import ApprovalButtons from '../components/ApprovalButtons'
 import TraceTimeline from '../components/TraceTimeline'
 
-export default function RecommendPage({ activeDomain }) {
+import { useAppStore } from '../store/appStore'
+
+export default function RecommendPage() {
+  const activeDomain = useAppStore((state) => state.activeDomain)
+
   const [domain, setDomain] = useState(null)
   const [accounts, setAccounts] = useState([])
   const [loading, setLoading] = useState(true)
