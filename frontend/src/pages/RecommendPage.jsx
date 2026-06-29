@@ -12,6 +12,9 @@ import { useAppStore } from '../store/appStore'
 
 export default function RecommendPage() {
   const activeDomain = useAppStore((state) => state.activeDomain)
+  const setExecutionData = useAppStore((state) => state.setExecutionData)
+  const setOutcomeData = useAppStore((state) => state.setOutcomeData)
+  const setSidebarPanel = useAppStore((state) => state.setSidebarPanel)
 
   const [domain, setDomain] = useState(null)
   const [accounts, setAccounts] = useState([])
@@ -47,6 +50,8 @@ export default function RecommendPage() {
       setRecoData(null)
       setOutcomeResult(null)
       setReflectionData(null)
+      setExecutionData(null)
+      setOutcomeData(null)
 
       const [domainData, accountsData] = await Promise.all([
         fetchDomain(domainName),
@@ -76,6 +81,8 @@ export default function RecommendPage() {
       const entityId = selectedEntity.account_id || selectedEntity.candidate_id
       const data = await postRecommend(activeDomain, entityId)
       setRecoData(data)
+      setExecutionData(data)
+      setSidebarPanel('agents')
 
       // Initialize edit fields
       if (data.recommendation?.selected_action) {
@@ -95,6 +102,7 @@ export default function RecommendPage() {
     try {
       const result = await postApprove(recoData.thread_id, outcome, feedbackText, customEditedAction)
       setOutcomeResult(result)
+      setOutcomeData(result)
       setIsEditModalOpen(false)
     } catch (err) {
       alert(err.message)

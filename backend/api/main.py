@@ -118,6 +118,8 @@ def post_recommend(req: RecommendRequest):
             or ""
         )
 
+        thread_id = str(uuid.uuid4())
+
         state = {
             "domain_pack": domain_pack,
             "account": entity,
@@ -128,10 +130,9 @@ def post_recommend(req: RecommendRequest):
             "evidence": [],
             "confidence": {},
             "human_feedback": None,
-            "metadata": {},
+            "metadata": {"thread_id": thread_id},
         }
 
-        thread_id = str(uuid.uuid4())
         config = {"configurable": {"thread_id": thread_id}}
 
         logger.info(f"Running graph on thread '{thread_id}' for entity '{req.entity_id}'...")
@@ -143,10 +144,15 @@ def post_recommend(req: RecommendRequest):
         elapsed_ms = round((time.time() - t0) * 1000)
 
         checkpoint_state = graph.get_state(config)
-        routing_path = checkpoint_state.values.get("metadata", {}).get("routing_path", "unknown")
+        vals = checkpoint_state.values
+        routing_path = vals.get("metadata", {}).get("routing_path", "unknown")
 
-        # Store trace
+        # Merge incremental steps with trace metadata
+        trace_data = planner_traces.get(thread_id, {})
+        agent_steps = trace_data.get("steps", [])
+
         planner_traces[thread_id] = {
+            **trace_data,
             "thread_id": thread_id,
             "domain_pack_id": req.domain_pack_id,
             "entity_id": req.entity_id,
@@ -160,12 +166,30 @@ def post_recommend(req: RecommendRequest):
             "execution_time_ms": elapsed_ms,
         }
 
+        # Build recommendation analysis
+        rec_analysis = _build_recommendation_analysis(vals)
+
+        # Build execution summary
+        completed_count = sum(1 for s in agent_steps if s["status"] == "completed")
+        paused_count = sum(1 for s in agent_steps if s["status"] == "paused")
+        conf = vals.get("confidence", {})
+
         return {
             "thread_id": thread_id,
-            "recommendation": checkpoint_state.values.get("explanation_output"),
+            "recommendation": vals.get("explanation_output"),
             "routing_path": routing_path,
             "execution_time_ms": elapsed_ms,
             "status": "paused_for_approval",
+            "agent_steps": agent_steps,
+            "execution_summary": {
+                "total_agents": len(agent_steps),
+                "completed": completed_count,
+                "paused": paused_count,
+                "path_taken": routing_path,
+                "total_evidence": len(vals.get("evidence", [])),
+                "confidence_score": conf.get("score", 0),
+            },
+            "recommendation_analysis": rec_analysis,
         }
 
     except HTTPException:
@@ -193,6 +217,77 @@ def _build_executed_path(routing_path: str) -> List[str]:
         "explanation_node",
         "human_approval_node (paused)",
     ]
+
+
+def _build_recommendation_analysis(vals: dict) -> dict:
+    """Build the curated recommendation analysis for the AI Explainability Canvas."""
+    explanation = vals.get("explanation_output", {})
+    reasoning = vals.get("reasoning_output", {})
+    rec_output = vals.get("recommendation_output", {})
+    evidence_list = vals.get("evidence", [])
+    conf = vals.get("confidence", {})
+
+    # Build "why this" reasons from reasoning trace and evidence
+    why_this = []
+    reasoning_trace = explanation.get("reasoning_trace", [])
+    for item in reasoning_trace:
+        if isinstance(item, str) and len(item) > 10:
+            # Extract the key insight portion
+            why_this.append(item.split(": ", 1)[-1] if ": " in item else item)
+
+    # Add entity-derived signals
+    account = vals.get("account", {})
+    if account.get("renewal_date"):
+        from datetime import datetime
+        try:
+            rd = datetime.strptime(account["renewal_date"], "%Y-%m-%d")
+            days_until = (rd - datetime.now()).days
+            if days_until < 60:
+                why_this.insert(0, f"Renewal in {days_until} days")
+        except Exception:
+            pass
+    if account.get("usage_trend"):
+        why_this.insert(0, f"Usage trend: {account['usage_trend']}")
+    if account.get("health_score") is not None:
+        why_this.insert(0, f"Health score: {account['health_score']}")
+
+    # Add evidence-based reasons
+    for ev in evidence_list[:3]:
+        src = ev.get("source", "")
+        src_type = ev.get("source_type", "")
+        if src_type == "playbook":
+            why_this.append(f"{src.replace('_', ' ').title()} playbook matched")
+        elif src_type == "past_case":
+            why_this.append(f"Similar past case matched ({src})")
+
+    # Deduplicate while preserving order
+    seen = set()
+    unique_why = []
+    for item in why_this:
+        if item not in seen:
+            seen.add(item)
+            unique_why.append(item)
+
+    # Build "why not others" from rejected candidates
+    why_not_others = []
+    selected_id = rec_output.get("selected_action_id", "")
+    for action in rec_output.get("candidate_actions", []):
+        if action.get("id") != selected_id and action.get("rejected_reason"):
+            why_not_others.append({
+                "action": action.get("title", ""),
+                "reason": action["rejected_reason"],
+            })
+
+    return {
+        "why_this": unique_why[:8],
+        "why_not_others": why_not_others,
+        "confidence_breakdown": {
+            "score": conf.get("score", 0),
+            "evidence_count": conf.get("evidence_count", 0),
+            "source_agreement": conf.get("source_agreement", 0),
+            "historical_acceptance_rate": conf.get("historical_acceptance_rate", 0),
+        },
+    }
 
 
 # ── Approve (resumes graph) ─────────────────────────────────────────────────
@@ -314,6 +409,65 @@ def get_history(domain: str = Query("customer_success")):
     except Exception as e:
         logger.error(f"History error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Previous recommendation (for "What Changed" comparison) ─────────────────
+
+@app.get(f"{settings.API_V1_PREFIX}/previous-recommendation")
+def get_previous_recommendation(
+    domain: str = Query("customer_success"),
+    entity_id: str = Query(...),
+):
+    """Returns the most recent recommendation for an entity (for diff view)."""
+    try:
+        with SessionLocal() as session:
+            recs = (
+                session.query(RecommendationRecord)
+                .filter(
+                    RecommendationRecord.domain_pack_id == domain,
+                    RecommendationRecord.entity_id == entity_id,
+                )
+                .order_by(RecommendationRecord.created_at.desc())
+                .limit(2)
+                .all()
+            )
+
+            if not recs:
+                return {"has_previous": False, "previous": None, "changes": []}
+
+            # The first result is the current (just-created), second is previous
+            prev = recs[1] if len(recs) > 1 else recs[0]
+
+            try:
+                prev_data = json.loads(prev.recommendation_json)
+            except Exception:
+                prev_data = {}
+
+            # Get feedback for previous
+            fb = (
+                session.query(FeedbackRecord)
+                .filter(FeedbackRecord.recommendation_id == prev.recommendation_id)
+                .first()
+            )
+
+            prev_action = prev_data.get("selected_action", {})
+
+            return {
+                "has_previous": len(recs) > 1,
+                "previous": {
+                    "recommendation_id": prev.recommendation_id,
+                    "entity_id": prev.entity_id,
+                    "action_title": prev_action.get("title", "N/A"),
+                    "action_description": prev_action.get("description", ""),
+                    "confidence": prev_data.get("computed_confidence", {}).get("score", 0),
+                    "outcome": fb.outcome if fb else "unknown",
+                    "created_at": prev.created_at.isoformat() if prev.created_at else None,
+                },
+            }
+
+    except Exception as e:
+        logger.error(f"Previous recommendation error: {e}")
+        return {"has_previous": False, "previous": None}
 
 
 # ── Heuristics (learned from reflection) ─────────────────────────────────────

@@ -88,3 +88,13 @@ export async function fetchDomainConfig(domainName) {
   return res.json()
 }
 
+export async function fetchPreviousRecommendation(domainName, entityId) {
+  try {
+    const res = await fetch(`${API_BASE}/previous-recommendation?domain=${domainName}&entity_id=${entityId}`)
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
+}
+
