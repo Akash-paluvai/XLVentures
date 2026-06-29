@@ -46,12 +46,30 @@ class LearningAgent:
         Write the recommendation record and feedback outcome to episodic SQLite memory.
         Returns the generated feedback_id.
         """
+        # Extract safety/audit metadata
+        rec_meta = recommendation.get("metadata") or {}
+        fallback_used = rec_meta.get("fallback_used", False)
+        model_name = rec_meta.get("model_name")
+        prompt_version = rec_meta.get("prompt_version")
+        domain_pack_version = rec_meta.get("domain_pack_version")
+        planner_version = rec_meta.get("planner_version")
+        recommendation_sources = recommendation.get("recommendation_sources", [])
+
         # Step 1: Write recommendation to database
         rec_id = write_recommendation(
             entity_id=entity_id,
             domain_pack_id=domain_pack_id,
             recommendation_dict=recommendation,
+            fallback_used=fallback_used,
+            model_name=model_name,
+            prompt_version=prompt_version,
+            domain_pack_version=domain_pack_version,
+            planner_version=planner_version,
+            recommendation_sources=recommendation_sources,
         )
+
+        from datetime import datetime, timezone
+        approved_at = datetime.now(timezone.utc) if outcome in ["approved", "edited"] else None
 
         # Step 2: Write feedback outcome to database
         fb_id = write_feedback(
@@ -60,6 +78,7 @@ class LearningAgent:
             domain_pack_id=domain_pack_id,
             human_feedback=human_feedback,
             outcome=outcome,
+            approved_at=approved_at,
         )
 
         logger.info(f"LearningAgent: Saved outcome to episodic memory (rec_id={rec_id}, fb_id={fb_id}).")
@@ -90,13 +109,29 @@ class LearningAgent:
         for fb, rec in rows:
             try:
                 rec_data = json.loads(rec.recommendation_json)
+
+                # Trusted Learning Policy:
+                # 1. Skip learning from rejected / ignored cases
+                if fb.outcome not in ["approved", "edited"]:
+                    continue
+
+                # 2. Skip learning from low confidence recommendations (< 0.50)
+                conf = rec_data.get("computed_confidence") or {}
+                if conf.get("score", 1.0) < 0.50:
+                    continue
+
+                # 3. Skip learning from flagged prompt injection interactions
+                meta = rec_data.get("metadata") or {}
+                if meta.get("prompt_injection_detected", False):
+                    continue
+
                 selected = rec_data.get("selected_action") or {}
                 title = selected.get("title", "Unknown Action")
 
                 if title not in stats:
                     stats[title] = {"approved": 0, "rejected": 0, "edited": 0, "needs_info": 0}
 
-                outcome = fb.outcome  # e.g., 'approved', 'rejected', 'edited', 'needs_info'
+                outcome = fb.outcome  # e.g., 'approved', 'edited'
                 if outcome in stats[title]:
                     stats[title][outcome] += 1
             except Exception as ex:
@@ -115,14 +150,8 @@ class LearningAgent:
             for title, outcomes in stats.items():
                 markdown += f"### Action: {title}\n"
                 markdown += f"- Approved Count: {outcomes['approved']}\n"
-                markdown += f"- Rejected Count: {outcomes['rejected']}\n"
                 markdown += f"- Edited Count: {outcomes['edited']}\n"
-                
-                # Simple heuristic rule generation
-                if outcomes["rejected"] > outcomes["approved"]:
-                    markdown += f"- **Guidance**: High risk of rejection. Human success managers frequently reject this action. Reconsider selecting it as the primary next best action unless no other options are feasible.\n"
-                else:
-                    markdown += f"- **Guidance**: Strong human acceptance. This action is highly favored and should be prioritized when context aligns.\n"
+                markdown += f"- **Guidance**: Strong human acceptance. This action is highly favored and should be prioritized when context aligns.\n"
                 markdown += "\n"
         else:
             markdown += "No human feedback outcomes registered yet. Default playbook guidelines apply.\n"

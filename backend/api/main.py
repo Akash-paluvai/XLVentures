@@ -12,6 +12,7 @@ from backend.core.config_loader import load_domain_pack, load_accounts
 from backend.registry.agent_registry import bootstrap_agents, get_agent
 from backend.core.planner import graph, planner_traces
 from backend.memory.episodic import SessionLocal, RecommendationRecord, FeedbackRecord
+from backend.security.input_guard import validate_interaction_input, ValidationError
 
 
 # Setup logging
@@ -102,6 +103,16 @@ def get_accounts(domain: str = Query("customer_success")):
 @app.post(f"{settings.API_V1_PREFIX}/recommend")
 def post_recommend(req: RecommendRequest):
     try:
+        # Reset request-scoped LLM calls counter
+        from backend.core.llm_client import llm_call_counter
+        llm_call_counter.set(0)
+
+        # Validate inputs via input_guard
+        try:
+            validate_interaction_input(req.model_dump())
+        except ValidationError as val_err:
+            raise HTTPException(status_code=400, detail=str(val_err))
+
         domain_pack = load_domain_pack(req.domain_pack_id)
         entities = load_accounts(req.domain_pack_id)
 
@@ -295,6 +306,18 @@ def _build_recommendation_analysis(vals: dict) -> dict:
 @app.post(f"{settings.API_V1_PREFIX}/approve")
 def post_approve(req: ApproveRequest):
     try:
+        # Idempotency Check: if already processed, return immediately
+        if req.thread_id in planner_traces:
+            trace = planner_traces[req.thread_id]
+            if not trace.get("paused", True):
+                logger.info(f"Idempotency Gate: Thread '{req.thread_id}' already processed (outcome={trace.get('outcome')}). Returning cached response.")
+                return {
+                    "status": "success",
+                    "metadata": {"outcome_feedback_id": trace.get("outcome_feedback_id")},
+                    "outcome": trace.get("outcome"),
+                    "idempotent_cached": True,
+                }
+
         config = {"configurable": {"thread_id": req.thread_id}}
         current_state = graph.get_state(config)
 
@@ -323,11 +346,13 @@ def post_approve(req: ApproveRequest):
         elapsed_ms = round((time.time() - t0) * 1000)
 
         final_state = graph.get_state(config)
+        fb_id = final_state.values.get("metadata", {}).get("outcome_feedback_id")
 
         # Update trace
         if req.thread_id in planner_traces:
             trace = planner_traces[req.thread_id]
             trace["paused"] = False
+            trace["outcome_feedback_id"] = fb_id
             trace["executed_path"].append("learning_node")
             trace["timestamps"]["completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
             trace["execution_time_ms"] += elapsed_ms

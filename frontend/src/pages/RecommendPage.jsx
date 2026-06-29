@@ -237,6 +237,46 @@ export default function RecommendPage() {
                       <h3 className="domain-detail-label" style={{ marginBottom: '12px' }}>Computed Confidence</h3>
                       <ConfidenceBadge confidence={recoData.recommendation?.computed_confidence} />
 
+                      {/* Calibration & Provenance Details */}
+                      <div className="glass" style={{ padding: '12px 16px', margin: '12px 0 20px 0', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '4px' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>Provenances:</span>
+                          <span style={{ color: '#fff', fontWeight: '500' }}>
+                            {recoData.recommendation?.recommendation_sources?.length > 0 
+                              ? recoData.recommendation.recommendation_sources.join(', ') 
+                              : 'no source documents matched'}
+                          </span>
+                        </div>
+                        {recoData.recommendation?.computed_confidence?.confidence_reason && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '4px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>Calibration:</span>
+                            <span style={{ color: 'var(--accent-cyan)' }}>
+                              Evidences: {recoData.recommendation.computed_confidence.confidence_reason.evidence_count} · Consensus: {Math.round(recoData.recommendation.computed_confidence.confidence_reason.agreement * 100)}%
+                            </span>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>Reproducibility:</span>
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
+                            Model: {recoData.recommendation?.metadata?.model_name || 'local'} · Pack v{recoData.recommendation?.metadata?.domain_pack_version || '1.0.0'} · Planner v{recoData.recommendation?.metadata?.planner_version || '1.5.2'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Advisory Warning Execution Policy */}
+                      <div style={{
+                        padding: '12px 16px',
+                        marginBottom: '20px',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        lineHeight: '140%',
+                        background: recoData.recommendation?.metadata?.low_confidence_fallback_triggered ? 'rgba(217, 119, 6, 0.1)' : 'rgba(124, 58, 237, 0.08)',
+                        borderLeft: recoData.recommendation?.metadata?.low_confidence_fallback_triggered ? '3px solid #d97706' : '3px solid var(--accent-purple)',
+                        color: recoData.recommendation?.metadata?.low_confidence_fallback_triggered ? '#f59e0b' : 'var(--text-secondary)'
+                      }}>
+                        <strong>🔒 Advisory Policy</strong>: {recoData.recommendation?.metadata?.execution_policy || 'Recommendations are advisory only. No actions are automatically executed without approval.'}
+                      </div>
+
                       <CandidateCards
                         candidates={recoData.recommendation?.candidate_actions}
                         selectedActionId={recoData.recommendation?.selected_action_id}

@@ -101,6 +101,8 @@ class ComputedConfidence(BaseModel):
     evidence_count: int = Field(..., description="Number of supporting evidence nodes")
     source_agreement: float = Field(..., description="Ratio of consensus across evidence sources (0.0 to 1.0)")
     historical_acceptance_rate: float = Field(..., description="Historical human acceptance rate of this recommendation type")
+    confidence_band: Optional[str] = Field("Medium Confidence", description="Calibrated confidence band (High, Medium, Low)")
+    confidence_reason: Optional[Dict[str, float]] = Field(None, description="Granular components of the confidence score calculation")
 
     model_config = {
         "json_schema_extra": {
@@ -108,7 +110,9 @@ class ComputedConfidence(BaseModel):
                 "score": 0.88,
                 "evidence_count": 5,
                 "source_agreement": 0.90,
-                "historical_acceptance_rate": 0.85
+                "historical_acceptance_rate": 0.85,
+                "confidence_band": "High Confidence",
+                "confidence_reason": {"evidence": 0.95, "agreement": 0.90, "history": 0.85}
             }
         }
     }
@@ -174,6 +178,7 @@ class Recommendation(BaseModel):
     candidate_actions: List[CandidateAction] = Field(default_factory=list, description="Considered candidate action options")
     selected_action: Optional[CandidateAction] = Field(None, description="The selected action chosen as next best action")
     evidence: List[EvidenceNode] = Field(default_factory=list, description="Evidence nodes collected during evaluation")
+    recommendation_sources: List[str] = Field(default_factory=list, description="Explicit record of sources (playbooks/past cases) that drove this action")
     reasoning_trace: List[str] = Field(default_factory=list, description="Internal agent chain of thought trace")
     computed_confidence: ComputedConfidence = Field(..., description="Calculated confidence score details")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Timestamp when this recommendation was generated")
