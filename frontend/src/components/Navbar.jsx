@@ -12,16 +12,16 @@ export default function Navbar() {
 
       <div className="navbar-links">
         <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`} end>
-          🎯 Recommend
+          Recommend
         </NavLink>
         <NavLink to="/memory" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>
-          🧠 Memory
+          Memory
         </NavLink>
         <NavLink to="/trace" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>
-          📊 Traces
+          Traces
         </NavLink>
         <NavLink to="/config" className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}>
-          ⚙️ Configuration
+          Configuration
         </NavLink>
       </div>
 

@@ -50,7 +50,6 @@ export default function WhatChangedPanel() {
           Run the pipeline to compare with previous recommendations.
         </p>
         <div className="why-empty-state">
-          <div className="why-empty-icon">🔄</div>
           <p>After running the pipeline, this panel will show what changed compared to the last recommendation for this entity.</p>
         </div>
       </div>

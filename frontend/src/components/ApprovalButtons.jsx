@@ -32,23 +32,23 @@ export default function ApprovalButtons({ onApprove, onEditClick, onReject, load
 
       <div className="feedback-actions">
         <button className="btn-ui btn-success-ui" onClick={handleApprove} disabled={loading}>
-          ✅ Approve
+          Approve
         </button>
         <button className="btn-ui btn-primary-ui" onClick={() => onEditClick(feedbackText)} disabled={loading}>
-          ✏️ Edit & Approve
+          Edit & Approve
         </button>
         <button className="btn-ui btn-warning-ui" onClick={() => setShowMissing(!showMissing)} disabled={loading}>
-          ❓ Request More Info
+          Request More Info
         </button>
         <button className="btn-ui btn-danger-ui" onClick={handleReject} disabled={loading}>
-          ❌ Reject
+          Reject
         </button>
       </div>
 
       {showMissing && (
         <div className="missing-info-box">
           <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--accent-amber)' }}>
-            ⚠️ Missing Information
+            Missing Information
           </h4>
           {missingInfo && missingInfo.length > 0 ? (
             <ul style={{ margin: 0, paddingLeft: '20px' }}>

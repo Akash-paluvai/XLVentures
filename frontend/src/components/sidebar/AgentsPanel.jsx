@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 
 const AGENT_ORDER = [
-  { id: 'planner', name: 'Planner', icon: '🧭' },
-  { id: 'context', name: 'Context Agent', icon: '📚' },
-  { id: 'reasoning', name: 'Reasoning Agent', icon: '🧠' },
-  { id: 'recommendation', name: 'Recommendation Agent', icon: '🎯' },
-  { id: 'explanation', name: 'Explanation Agent', icon: '📝' },
-  { id: 'human_approval', name: 'Human Approval', icon: '👤' },
-  { id: 'learning', name: 'Learning Agent', icon: '📖' },
+  { id: 'planner', name: 'Planner', icon: '' },
+  { id: 'context', name: 'Context Agent', icon: '' },
+  { id: 'reasoning', name: 'Reasoning Agent', icon: '' },
+  { id: 'recommendation', name: 'Recommendation Agent', icon: '' },
+  { id: 'explanation', name: 'Explanation Agent', icon: '' },
+  { id: 'human_approval', name: 'Human Approval', icon: '' },
+  { id: 'learning', name: 'Learning Agent', icon: '' },
 ]
 
 function StatusDot({ status }) {

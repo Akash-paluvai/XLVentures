@@ -3,7 +3,7 @@ import { useState } from 'react'
 const PIPELINE_AGENTS = [
   {
     id: 'planner',
-    icon: '🧭',
+    icon: '',
     name: 'Planner',
     purpose: 'Classify the entity situation as escalation or standard processing path.',
     input: 'Entity record + interaction notes',
@@ -13,7 +13,7 @@ const PIPELINE_AGENTS = [
   },
   {
     id: 'context',
-    icon: '📚',
+    icon: '',
     name: 'Context Agent',
     purpose: 'Retrieve relevant playbooks, past cases, and learned heuristics from memory.',
     input: 'Entity + interaction → semantic query',
@@ -23,7 +23,7 @@ const PIPELINE_AGENTS = [
   },
   {
     id: 'reasoning',
-    icon: '🧠',
+    icon: '',
     name: 'Reasoning Agent',
     purpose: 'Analyze risks, opportunities, conflicts, and missing information.',
     input: 'Entity + retrieved context + evidence',
@@ -33,7 +33,7 @@ const PIPELINE_AGENTS = [
   },
   {
     id: 'recommendation',
-    icon: '🎯',
+    icon: '',
     name: 'Recommendation Agent',
     purpose: 'Generate ranked candidate actions with rejection reasoning.',
     input: 'Reasoning output + evidence + entity context',
@@ -43,7 +43,7 @@ const PIPELINE_AGENTS = [
   },
   {
     id: 'explanation',
-    icon: '📝',
+    icon: '',
     name: 'Explanation Agent',
     purpose: 'Compute confidence scores and compile reasoning traces.',
     input: 'Recommendation + evidence + historical data',
@@ -53,7 +53,7 @@ const PIPELINE_AGENTS = [
   },
   {
     id: 'human_approval',
-    icon: '👤',
+    icon: '',
     name: 'Human Approval',
     purpose: 'Pause pipeline for human-in-the-loop decision.',
     input: 'Complete recommendation payload',
@@ -63,7 +63,7 @@ const PIPELINE_AGENTS = [
   },
   {
     id: 'learning',
-    icon: '📖',
+    icon: '',
     name: 'Learning Agent',
     purpose: 'Store outcomes and mine patterns for continuous learning.',
     input: 'Human decision + recommendation + feedback',

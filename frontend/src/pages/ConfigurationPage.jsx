@@ -50,7 +50,7 @@ export default function ConfigurationPage() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginBottom: '30px' }}>
         <div>
           <h1 className="page-title" style={{ margin: 0, fontFamily: 'var(--heading-font)', fontWeight: 800, fontSize: '2.5rem' }}>
-            ⚙️ Configuration Hub
+            Configuration Hub
           </h1>
           <p className="page-subtitle" style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)' }}>
             Inspect cross-domain prompt overrides, memory spaces, and validation checks.
@@ -155,7 +155,7 @@ export default function ConfigurationPage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {domain_pack.decision_points?.map((dp) => (
                 <span key={dp} className="domain-tag" style={{ background: 'rgba(139,92,246,0.05)', borderColor: 'rgba(139,92,246,0.3)', color: '#c084fc', fontSize: '0.8rem' }}>
-                  🎯 {dp.replace(/_/g, ' ')}
+                  {dp.replace(/_/g, ' ')}
                 </span>
               ))}
             </div>
@@ -271,7 +271,6 @@ export default function ConfigurationPage() {
                     {Math.round(metrics.acceptance_rate * 100)}%
                   </div>
                 </div>
-                <div style={{ fontSize: '1.5rem' }}>📈</div>
               </div>
 
               {domain_pack.id === 'customer_success' && (
@@ -283,7 +282,6 @@ export default function ConfigurationPage() {
                         {metrics.risk_catch_lead_time_days} Days
                       </div>
                     </div>
-                    <div style={{ fontSize: '1.5rem' }}>⏱️</div>
                   </div>
 
                   <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -293,7 +291,6 @@ export default function ConfigurationPage() {
                         +{metrics.simulated_nrr_impact_pct}%
                       </div>
                     </div>
-                    <div style={{ fontSize: '1.5rem' }}>💰</div>
                   </div>
                 </>
               )}
@@ -306,7 +303,6 @@ export default function ConfigurationPage() {
                       {metrics.time_to_hire_days} Days
                     </div>
                   </div>
-                  <div style={{ fontSize: '1.5rem' }}>⏱️</div>
                 </div>
               )}
             </div>

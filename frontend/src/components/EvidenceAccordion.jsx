@@ -15,7 +15,7 @@ export default function EvidenceAccordion({ evidence }) {
       {evidence.map((node, idx) => {
         const id = node.evidence_id || node.source || `ev_${idx}`
         const isExpanded = !!expanded[id]
-        const icon = node.source_type === 'playbook' ? '📘' : '🗂️'
+        const icon = ''
         const confidence = node.confidence ? Math.round(node.confidence * 100) : 80
         const retrievalType = node.retrieval_type || node.metadata?.retrieval_type || '—'
 
@@ -23,7 +23,6 @@ export default function EvidenceAccordion({ evidence }) {
           <div key={id} className="evidence-accordion-item">
             <button className="evidence-accordion-header" onClick={() => toggle(id)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>{icon}</span>
                 <strong>{node.source || id}</strong>
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                   ({node.source_type || '—'} → {retrievalType})

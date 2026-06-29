@@ -42,7 +42,7 @@ export default function CandidateCards({ candidates, selectedActionId, selectedA
 
               {!isSelected && act.rejected_reason && (
                 <div className="rejected-reason-box">
-                  ⚠️ <strong>Why not chosen:</strong> {act.rejected_reason}
+                  <strong>Why not chosen:</strong> {act.rejected_reason}
                 </div>
               )}
 
@@ -50,7 +50,7 @@ export default function CandidateCards({ candidates, selectedActionId, selectedA
                 <div style={{ marginTop: '12px' }}>
                   <button className="btn-ui btn-secondary-ui" onClick={() => setEditingAction(!editingAction)}
                     style={{ fontSize: '0.75rem', padding: '4px 10px' }}>
-                    ✏️ {editingAction ? 'Cancel Edit' : 'Edit Action'}
+                    {editingAction ? 'Cancel Edit' : 'Edit Action'}
                   </button>
 
                   {editingAction && (

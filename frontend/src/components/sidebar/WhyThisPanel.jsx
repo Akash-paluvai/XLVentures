@@ -15,7 +15,6 @@ export default function WhyThisPanel() {
           Run the pipeline on an entity to see the AI Explainability Canvas.
         </p>
         <div className="why-empty-state">
-          <div className="why-empty-icon">🔎</div>
           <p>The explainability canvas will show why a specific recommendation was chosen and why alternatives were rejected.</p>
         </div>
       </div>

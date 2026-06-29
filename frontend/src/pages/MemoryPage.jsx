@@ -34,9 +34,9 @@ export default function MemoryPage() {
   }
 
   const tabs = [
-    { id: 'recommendations', label: '📋 Recommendations', count: history.length },
-    { id: 'feedback', label: '💬 Feedback', count: history.reduce((sum, h) => sum + (h.feedback?.length || 0), 0) },
-    { id: 'heuristics', label: '💡 Learned Heuristics', count: heuristics.length },
+    { id: 'recommendations', label: 'Recommendations', count: history.length },
+    { id: 'feedback', label: 'Feedback', count: history.reduce((sum, h) => sum + (h.feedback?.length || 0), 0) },
+    { id: 'heuristics', label: 'Learned Heuristics', count: heuristics.length },
   ]
 
   if (loading) {
@@ -60,7 +60,7 @@ export default function MemoryPage() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">🧠 Episodic Memory</h1>
+        <h1 className="page-title">Episodic Memory</h1>
         <p className="page-subtitle">Historical recommendations, feedback, and learned heuristics for {activeDomain.replace(/_/g, ' ')}</p>
       </div>
 
@@ -77,7 +77,7 @@ export default function MemoryPage() {
           </button>
         ))}
         <button className="btn-ui btn-secondary-ui" onClick={loadData} style={{ marginLeft: 'auto', fontSize: '0.8rem', padding: '6px 12px' }}>
-          🔄 Refresh
+          Refresh
         </button>
       </div>
 
@@ -86,7 +86,6 @@ export default function MemoryPage() {
         <div className="memory-grid">
           {history.length === 0 ? (
             <div className="empty-state">
-              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📭</div>
               <h3>No recommendations yet</h3>
               <p>Run the decision pipeline on an entity to generate recommendations.</p>
             </div>
@@ -155,7 +154,6 @@ export default function MemoryPage() {
           )}
           {history.every(rec => !rec.feedback?.length) && (
             <div className="empty-state">
-              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>💬</div>
               <h3>No feedback recorded</h3>
               <p>Approve, edit, or reject a recommendation to generate feedback.</p>
             </div>
@@ -168,7 +166,6 @@ export default function MemoryPage() {
         <div className="memory-grid">
           {heuristics.length === 0 ? (
             <div className="empty-state">
-              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>💡</div>
               <h3>No learned heuristics yet</h3>
               <p>Run the reflection job from the Recommend page to generate heuristics.</p>
             </div>

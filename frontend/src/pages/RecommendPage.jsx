@@ -194,7 +194,7 @@ export default function RecommendPage() {
               <div className="recommendation-header">
                 <div>
                   <h2 style={{ margin: 0, fontSize: '1.8rem', fontFamily: 'var(--heading-font)' }}>
-                    🎯 {selectedEntity.company_name || selectedEntity.candidate_name}
+                    {selectedEntity.company_name || selectedEntity.candidate_name}
                   </h2>
                   <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                     ID: {selectedEntity.account_id || selectedEntity.candidate_id} | {selectedEntity.plan_tier || selectedEntity.current_stage || '—'}
@@ -206,7 +206,6 @@ export default function RecommendPage() {
               {/* Pre-recommendation */}
               {!recoData && !recoLoading && (
                 <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🤖</div>
                   <h3 style={{ margin: '0 0 10px 0', fontSize: '1.3rem' }}>Ready for Evaluation</h3>
                   <p style={{ maxWidth: '450px', margin: '0 auto 24px auto', fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: '145%' }}>
                     Run the LangGraph planner to classify this entity and generate a recommendation.
@@ -274,7 +273,7 @@ export default function RecommendPage() {
                         borderLeft: recoData.recommendation?.metadata?.low_confidence_fallback_triggered ? '3px solid #d97706' : '3px solid var(--accent-purple)',
                         color: recoData.recommendation?.metadata?.low_confidence_fallback_triggered ? '#f59e0b' : 'var(--text-secondary)'
                       }}>
-                        <strong>🔒 Advisory Policy</strong>: {recoData.recommendation?.metadata?.execution_policy || 'Recommendations are advisory only. No actions are automatically executed without approval.'}
+                        <strong>Advisory Policy</strong>: {recoData.recommendation?.metadata?.execution_policy || 'Recommendations are advisory only. No actions are automatically executed without approval.'}
                       </div>
 
                       <CandidateCards
@@ -294,7 +293,7 @@ export default function RecommendPage() {
                       ) : (
                         <div className="outcome-success">
                           <h3 style={{ margin: '0 0 8px 0', fontSize: '1.2rem', color: '#6ee7b7' }}>
-                            🎉 Decision Logged
+                            Decision Logged
                           </h3>
                           <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                             Pipeline completed. Episodic memory updated.
@@ -369,12 +368,12 @@ export default function RecommendPage() {
                 </p>
                 <button className="btn-ui btn-primary-ui" onClick={handleReflect} disabled={reflectLoading}
                   style={{ width: '100%', justifyContent: 'center' }}>
-                  {reflectLoading ? 'Mining...' : '💡 Run Reflection'}
+                  {reflectLoading ? 'Mining...' : 'Run Reflection'}
                 </button>
                 {reflectionData && (
                   <div className="reflection-report animate-fadeIn">
                     <h4 style={{ margin: '0 0 10px 0', fontSize: '0.95rem', color: 'var(--accent-emerald)' }}>
-                      ✅ {reflectionData.status}
+                      {reflectionData.status}
                     </h4>
                     <div className="reflection-md">
                       {reflectionData.heuristics || 'Reflection complete. No new patterns found.'}
@@ -391,7 +390,7 @@ export default function RecommendPage() {
       {isEditModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content glass">
-            <h3 style={{ margin: '0 0 16px 0', fontFamily: 'var(--heading-font)', color: '#fff' }}>✏️ Edit Recommendation & Approve</h3>
+            <h3 style={{ margin: '0 0 16px 0', fontFamily: 'var(--heading-font)', color: '#fff' }}>Edit Recommendation & Approve</h3>
             
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '6px' }}>Action Title</label>

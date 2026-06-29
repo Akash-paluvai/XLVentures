@@ -3,26 +3,26 @@ export default function PipelineStatus({ routingPath, executionTimeMs }) {
 
   const steps = isEscalation
     ? [
-        { name: 'Planner Classification', status: 'done', icon: '🧭' },
-        { name: 'Context Agent', status: 'done', icon: '🔍' },
-        { name: 'Reasoning Agent', status: 'done', icon: '🧠' },
-        { name: 'Recommendation Agent', status: 'done', icon: '🎯' },
-        { name: 'Explanation Agent', status: 'done', icon: '📋' },
-        { name: 'Human Approval Gate', status: 'paused', icon: '⏸️' },
+        { name: 'Planner Classification', status: 'done', icon: '' },
+        { name: 'Context Agent', status: 'done', icon: '' },
+        { name: 'Reasoning Agent', status: 'done', icon: '' },
+        { name: 'Recommendation Agent', status: 'done', icon: '' },
+        { name: 'Explanation Agent', status: 'done', icon: '' },
+        { name: 'Human Approval Gate', status: 'paused', icon: '' },
       ]
     : [
-        { name: 'Planner Classification', status: 'done', icon: '🧭' },
-        { name: 'Context Agent', status: 'done', icon: '🔍' },
-        { name: 'Standard Recommendation', status: 'done', icon: '🎯' },
-        { name: 'Explanation Agent', status: 'done', icon: '📋' },
-        { name: 'Human Approval Gate', status: 'paused', icon: '⏸️' },
+        { name: 'Planner Classification', status: 'done', icon: '' },
+        { name: 'Context Agent', status: 'done', icon: '' },
+        { name: 'Standard Recommendation', status: 'done', icon: '' },
+        { name: 'Explanation Agent', status: 'done', icon: '' },
+        { name: 'Human Approval Gate', status: 'paused', icon: '' },
       ]
 
   return (
     <div className="pipeline-status">
       <div className="pipeline-header">
         <div className={`pipeline-badge ${isEscalation ? 'pipeline-badge-escalation' : 'pipeline-badge-standard'}`}>
-          {isEscalation ? '⚠️ Escalation Path' : '✅ Standard Path'}
+          {isEscalation ? 'Escalation Path' : 'Standard Path'}
         </div>
         {executionTimeMs && (
           <span className="pipeline-time">{executionTimeMs}ms</span>

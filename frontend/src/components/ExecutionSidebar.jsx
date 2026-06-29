@@ -5,10 +5,10 @@ import WhyThisPanel from './sidebar/WhyThisPanel'
 import WhatChangedPanel from './sidebar/WhatChangedPanel'
 
 const NAV_ITEMS = [
-  { id: 'overview', icon: '🏠', label: 'Overview' },
-  { id: 'agents', icon: '🤖', label: 'Agent Execution' },
-  { id: 'why', icon: '🔎', label: 'Why This?' },
-  { id: 'changed', icon: '🔄', label: 'What Changed' },
+  { id: 'overview', icon: '', label: 'Overview' },
+  { id: 'agents', icon: '', label: 'Agent Execution' },
+  { id: 'why', icon: '', label: 'Why This?' },
+  { id: 'changed', icon: '', label: 'What Changed' },
 ]
 
 const PANELS = {
@@ -34,7 +34,6 @@ export default function ExecutionSidebar() {
         <>
           {/* Header */}
           <div className="sidebar-header">
-            <span className="sidebar-header-icon">🔍</span>
             <span className="sidebar-header-title">AI Execution Center</span>
           </div>
 

@@ -34,16 +34,15 @@ export default function TracePage() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">📊 Planner Execution Traces</h1>
+        <h1 className="page-title">Planner Execution Traces</h1>
         <p className="page-subtitle">Inspect LangGraph planner classification, routing paths, and execution timelines</p>
         <button className="btn-ui btn-secondary-ui" onClick={loadTraces} style={{ marginTop: '12px', fontSize: '0.8rem', padding: '6px 12px' }}>
-          🔄 Refresh
+          Refresh
         </button>
       </div>
 
       {traces.length === 0 ? (
         <div className="empty-state">
-          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📊</div>
           <h3>No traces yet</h3>
           <p>Run the decision pipeline on an entity to generate execution traces.</p>
         </div>
@@ -59,7 +58,7 @@ export default function TracePage() {
               >
                 <div className="trace-card-header">
                   <span className={`pipeline-badge ${trace.classification === 'escalation' ? 'pipeline-badge-escalation' : 'pipeline-badge-standard'}`}>
-                    {trace.classification === 'escalation' ? '⚠️ Escalation' : '✅ Standard'}
+                    {trace.classification === 'escalation' ? 'Escalation' : 'Standard'}
                   </span>
                   <span className="trace-card-time">{trace.execution_time_ms}ms</span>
                 </div>
@@ -68,7 +67,7 @@ export default function TracePage() {
                 </div>
                 <div className="trace-card-meta">
                   {trace.timestamps?.started_at ? new Date(trace.timestamps.started_at).toLocaleString() : '—'}
-                  {trace.paused ? ' · ⏸ Paused' : trace.outcome ? ` · ${trace.outcome}` : ' · ✅ Complete'}
+                  {trace.paused ? ' · Paused' : trace.outcome ? ` · ${trace.outcome}` : ' · Complete'}
                 </div>
               </div>
             ))}
@@ -86,7 +85,7 @@ export default function TracePage() {
                 <div className="trace-section">
                   <h3 className="domain-detail-label">Classification</h3>
                   <div className={`pipeline-badge-lg ${selectedTrace.classification === 'escalation' ? 'pipeline-badge-escalation' : 'pipeline-badge-standard'}`}>
-                    {selectedTrace.classification === 'escalation' ? '⚠️ Escalation Path Triggered' : '✅ Standard Cadence Route'}
+                    {selectedTrace.classification === 'escalation' ? 'Escalation Path Triggered' : 'Standard Cadence Route'}
                   </div>
                 </div>
 
@@ -133,7 +132,7 @@ export default function TracePage() {
                     <div className="trace-stat">
                       <span className="trace-stat-label">State</span>
                       <span className={`trace-stat-value ${selectedTrace.paused ? 'text-amber' : 'text-emerald'}`}>
-                        {selectedTrace.paused ? '⏸ Awaiting Approval' : '✅ Complete'}
+                        {selectedTrace.paused ? 'Awaiting Approval' : 'Complete'}
                       </span>
                     </div>
                     <div className="trace-stat">
