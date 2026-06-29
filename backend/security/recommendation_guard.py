@@ -18,7 +18,7 @@ def validate_recommendation(rec: Dict[str, Any], account: Dict[str, Any] = None)
     evidence = rec.get("evidence") or []
     computed_conf = rec.get("computed_confidence") or {}
     score = computed_conf.get("score", 1.0)
-    
+
     # 1. Evidence check & penalty
     evidence_count = len(evidence)
     if evidence_count == 0:
