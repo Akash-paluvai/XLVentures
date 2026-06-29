@@ -6,7 +6,7 @@ deltas across renewal, churn, and expansion dimensions.
 """
 
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ SEVERITY_THRESHOLDS = {
 
 def assess_impact(
     signals: List[str],
-    entity: dict = None,
+    entity: Optional[dict] = None,
 ) -> Dict[str, Any]:
     """
     Compute aggregate impact deltas from a list of extracted signals.

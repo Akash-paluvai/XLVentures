@@ -1,6 +1,7 @@
 import logging
 import json
 import time
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -25,9 +26,26 @@ from backend.core.impact_engine import assess_impact
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """On startup, validate domain packs and bootstrap agents."""
+    logger.info("Initializing and validating domain packs...")
+    for pack_name in ["customer_success", "recruitment"]:
+        try:
+            load_domain_pack(pack_name)
+            logger.info(f"Validated domain pack: '{pack_name}'.")
+        except Exception as e:
+            logger.error(f"CRITICAL: Failed to validate '{pack_name}': {e}")
+            raise RuntimeError(f"Domain pack '{pack_name}' invalid: {e}")
+
+    logger.info("Bootstrapping agents in registry...")
+    bootstrap_agents()
+    yield
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="FastAPI backend for Agentic Decision Intelligence Platform"
+    description="FastAPI backend for Agentic Decision Intelligence Platform",
+    lifespan=lifespan
 )
 
 # CORS configuration from settings
@@ -66,22 +84,7 @@ class InteractionRequest(BaseModel):
     tags: Optional[List[str]] = None
 
 
-# ── Startup ──────────────────────────────────────────────────────────────────
-
-@app.on_event("startup")
-def startup_event():
-    """On startup, validate domain packs and bootstrap agents."""
-    logger.info("Initializing and validating domain packs...")
-    for pack_name in ["customer_success", "recruitment"]:
-        try:
-            load_domain_pack(pack_name)
-            logger.info(f"Validated domain pack: '{pack_name}'.")
-        except Exception as e:
-            logger.error(f"CRITICAL: Failed to validate '{pack_name}': {e}")
-            raise RuntimeError(f"Domain pack '{pack_name}' invalid: {e}")
-
-    logger.info("Bootstrapping agents in registry...")
-    bootstrap_agents()
+# ── Startup/Lifespan Handler Completed ────────────────────────────────────────
 
 
 # ── Health ───────────────────────────────────────────────────────────────────
@@ -431,7 +434,8 @@ def get_history(domain: str = Query("customer_success")):
                 ]
 
                 try:
-                    rec_data = json.loads(rec.recommendation_json)
+                    rec_json = rec.recommendation_json
+                    rec_data = json.loads(str(rec_json)) if rec_json is not None else {}
                 except Exception:
                     rec_data = {}
 
@@ -479,7 +483,8 @@ def get_previous_recommendation(
             prev = recs[1] if len(recs) > 1 else recs[0]
 
             try:
-                prev_data = json.loads(prev.recommendation_json)
+                prev_json = prev.recommendation_json
+                prev_data = json.loads(str(prev_json)) if prev_json is not None else {}
             except Exception:
                 prev_data = {}
 
@@ -716,7 +721,8 @@ def post_interaction(req: InteractionRequest):
             )
             if prev_recs:
                 try:
-                    prev_rec_data = json.loads(prev_recs[0].recommendation_json)
+                    prev_rec_json = prev_recs[0].recommendation_json
+                    prev_rec_data = json.loads(str(prev_rec_json)) if prev_rec_json is not None else {}
                     prev_action_title = prev_rec_data.get("selected_action", {}).get("title", "N/A")
                 except Exception:
                     prev_rec_data = {}
