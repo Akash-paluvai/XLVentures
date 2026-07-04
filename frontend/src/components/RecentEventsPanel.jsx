@@ -107,7 +107,7 @@ export default function RecentEventsPanel() {
           <div key={evt.id} className="event-item" style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', gap: '10px', fontSize: '0.82rem', paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
               <span className="event-indicator" style={{ width: '8px', height: '8px', borderRadius: '50%', background: evt.color, boxShadow: `0 0 6px ${evt.color}`, flexShrink: 0 }} />
-              <span className="event-text" style={{ color: '#fff', fontWeight: '500' }}>
+              <span className="event-text" style={{ color: '#1d1d1f', fontWeight: '500' }}>
                 {evt.text}
               </span>
               <span className="event-entity-id" style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontFamily: 'var(--mono-font)' }}>
