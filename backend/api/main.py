@@ -9,6 +9,11 @@ from typing import Optional, Dict, Any, List
 import uuid
 
 from backend.core.settings import settings
+from backend.core.logger import setup_logging
+
+# Initialize root logging configuration early
+setup_logging()
+
 from backend.core.config_loader import load_domain_pack, load_accounts
 from backend.registry.agent_registry import bootstrap_agents, get_agent
 from backend.core.planner import graph, planner_traces
@@ -22,22 +27,61 @@ from backend.agents.interaction_analyzer import analyze_interaction
 from backend.core.impact_engine import assess_impact
 
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("api")
+
+def ensure_directories():
+    """Ensure that the data and chroma directories exist before startup."""
+    from pathlib import Path
+    
+    # Determine SQLite DB directory from DATABASE_URL
+    if settings.DATABASE_URL.startswith("sqlite:///"):
+        db_path_str = settings.DATABASE_URL.replace("sqlite:///", "")
+        db_path = Path(db_path_str)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        logger.info(f"SQLite directory checked/created at: {db_path.parent}")
+        
+    # Determine ChromaDB directory
+    chroma_path = Path(settings.CHROMA_PATH)
+    chroma_path.mkdir(parents=True, exist_ok=True)
+    logger.info(f"ChromaDB directory checked/created at: {chroma_path}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """On startup, validate domain packs and bootstrap agents."""
+    """On startup, initialize directories, validate domain packs, and bootstrap agents."""
+    # 1. Run filesystem setup
+    ensure_directories()
+    
+    # 2. Validate configurations & domain packs
     logger.info("Initializing and validating domain packs...")
     for pack_name in ["customer_success", "recruitment"]:
         try:
-            load_domain_pack(pack_name)
+            pack = load_domain_pack(pack_name)
             logger.info(f"Validated domain pack: '{pack_name}'.")
+            
+            # Validate accounts exist and are readable
+            accounts = load_accounts(pack_name)
+            logger.info(f"Validated accounts data for: '{pack_name}' (Loaded {len(accounts)} records).")
         except Exception as e:
             logger.error(f"CRITICAL: Failed to validate '{pack_name}': {e}")
-            raise RuntimeError(f"Domain pack '{pack_name}' invalid: {e}")
+            raise RuntimeError(f"Domain pack '{pack_name}' invalid or missing: {e}")
 
+    # 3. Validate playbooks exist
+    logger.info("Validating playbooks presence...")
+    data_dir = settings.BASE_DIR / "backend" / "data"
+    playbooks_found = False
+    for domain in ["customer_success", "recruitment"]:
+        playbook_dir = data_dir / domain / "playbooks"
+        if playbook_dir.exists() and any(playbook_dir.glob("*.md")):
+            playbooks_found = True
+            logger.info(f"Validated playbooks directory for domain: '{domain}'.")
+        else:
+            logger.warning(f"No markdown playbooks found for domain: '{domain}' at {playbook_dir}")
+    
+    if not playbooks_found:
+        logger.error("CRITICAL: No playbooks found in backend/data! Seeding memory is required.")
+        raise RuntimeError("CRITICAL: No playbooks found in backend/data. Check data paths.")
+
+    # 4. Bootstrap agents in registry
     logger.info("Bootstrapping agents in registry...")
     bootstrap_agents()
     yield

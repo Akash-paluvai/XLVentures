@@ -2,8 +2,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Any
 from backend.core.schemas import DomainPack
-
-BASE_DIR = Path(__file__).resolve().parent.parent
+from backend.core.settings import settings
 
 
 def load_domain_pack(domain_name: str) -> dict:
@@ -13,7 +12,7 @@ def load_domain_pack(domain_name: str) -> dict:
     """
     # Resolve domain pack filename
     domain_file = f"{domain_name}.json"
-    file_path = BASE_DIR / "config" / "domain_packs" / domain_file
+    file_path = settings.BASE_DIR / "backend" / "config" / "domain_packs" / domain_file
 
     if not file_path.exists():
         raise FileNotFoundError(f"Domain pack configuration file not found at: {file_path}")
@@ -33,12 +32,12 @@ def load_accounts(domain_name: str) -> list:
     Loads the synthetic accounts or candidates data file for a given domain name.
     """
     if domain_name == "customer_success":
-        file_path = BASE_DIR / "data" / "customer_success" / "accounts.json"
+        file_path = settings.BASE_DIR / "backend" / "data" / "customer_success" / "accounts.json"
     elif domain_name == "recruitment":
-        file_path = BASE_DIR / "data" / "recruitment" / "candidates.json"
+        file_path = settings.BASE_DIR / "backend" / "data" / "recruitment" / "candidates.json"
     else:
         # Generic fallback directory matching domain_name
-        file_path = BASE_DIR / "data" / domain_name / "accounts.json"
+        file_path = settings.BASE_DIR / "backend" / "data" / domain_name / "accounts.json"
 
     if not file_path.exists():
         raise FileNotFoundError(f"Accounts/candidates data file not found at: {file_path}")

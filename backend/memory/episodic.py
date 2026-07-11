@@ -16,17 +16,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 from backend.core.settings import settings
 
-# ---------------------------------------------------------------------------
-# Database setup
-# ---------------------------------------------------------------------------
-
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-_DB_PATH = _PROJECT_ROOT / "backend" / "data" / "platform.db"
-_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-
-_DATABASE_URL = f"sqlite:///{_DB_PATH}"
-
-engine = create_engine(_DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
+engine = create_engine(settings.DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 

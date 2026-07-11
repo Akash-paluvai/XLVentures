@@ -15,15 +15,7 @@ from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunct
 
 from backend.core.settings import settings
 
-# ---------------------------------------------------------------------------
-# ChromaDB client setup
-# ---------------------------------------------------------------------------
-
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-_CHROMA_PATH = _PROJECT_ROOT / "backend" / "data" / "chroma"
-_CHROMA_PATH.mkdir(parents=True, exist_ok=True)
-
-_client = chromadb.PersistentClient(path=str(_CHROMA_PATH))
+_client = chromadb.PersistentClient(path=settings.CHROMA_PATH)
 
 _embedding_fn = SentenceTransformerEmbeddingFunction(
     model_name="all-MiniLM-L6-v2",

@@ -1,0 +1,29 @@
+# Git and editor files
+.git
+.gitignore
+.vscode
+.DS_Store
+
+# Local environments and configurations
+.env
+.venv
+.pytest_cache
+.npm-cache
+
+# Python cache and build files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+build/
+dist/
+
+# Frontend dependencies and builds
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Backend local runtime databases and memory
+backend/data/platform.db
+backend/data/chroma/
