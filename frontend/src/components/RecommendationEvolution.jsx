@@ -29,7 +29,7 @@ export default function RecommendationEvolution({ evolutions }) {
 
               <div className="rec-evo-new">
                 <span className="rec-evo-label-sm" style={{ color: '#4ade80' }}>New</span>
-                <span className="rec-evo-title-sm" style={{ color: '#fff' }}>
+                <span className="rec-evo-title-sm" style={{ color: '#1d1d1f' }}>
                   {evo.new_recommendation?.title || 'N/A'}
                 </span>
               </div>

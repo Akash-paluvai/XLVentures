@@ -63,7 +63,7 @@ export default function ConfigurationPage() {
           <select
             value={activeDomain}
             onChange={(e) => setActiveDomain(e.target.value)}
-            style={{ background: '#0b0f19', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', outline: 'none' }}
+            style={{ background: '#f5f5f7', color: '#1d1d1f', border: '1px solid rgba(0,0,0,0.1)', padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', outline: 'none' }}
           >
             {configData.supported_domains?.map((d) => (
               <option key={d} value={d}>
@@ -84,7 +84,7 @@ export default function ConfigurationPage() {
           <div className="glass" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div>
-                <h2 style={{ margin: 0, fontFamily: 'var(--heading-font)', fontSize: '1.6rem', color: '#fff' }}>
+                <h2 style={{ margin: 0, fontFamily: 'var(--heading-font)', fontSize: '1.6rem', color: '#1d1d1f' }}>
                   {domain_pack.name} Pack
                 </h2>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -138,7 +138,7 @@ export default function ConfigurationPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
                 {domain_pack.business_rules.map((rule, idx) => (
                   <div key={idx} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.85rem', fontFamily: 'var(--mono-font)', color: '#fff' }}>
+                    <span style={{ fontSize: '0.85rem', fontFamily: 'var(--mono-font)', color: '#1d1d1f' }}>
                       {rule.rule}
                     </span>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-emerald)', background: 'rgba(16,185,129,0.1)', padding: '2px 8px', borderRadius: '4px' }}>
@@ -171,7 +171,7 @@ export default function ConfigurationPage() {
                 return (
                   <div key={agentKey} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <strong style={{ fontSize: '0.9rem', color: '#fff' }}>{agentLabel}</strong>
+                      <strong style={{ fontSize: '0.9rem', color: '#1d1d1f' }}>{agentLabel}</strong>
                       {overrideText ? (
                         <span style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', fontWeight: 600 }}>
                           ✓ Override Loaded
@@ -238,22 +238,22 @@ export default function ConfigurationPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative', paddingLeft: '16px', borderLeft: '2px solid rgba(255,255,255,0.05)' }}>
               <div style={{ position: 'relative' }}>
                 <div style={{ position: 'absolute', left: '-21px', top: '4px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-emerald)' }} />
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>1. Domain Pack Loaded ✓</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1d1d1f' }}>1. Domain Pack Loaded ✓</div>
               </div>
               <div style={{ position: 'relative' }}>
                 <div style={{ position: 'absolute', left: '-21px', top: '4px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-emerald)' }} />
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>2. Memory Collection Switched ✓</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1d1d1f' }}>2. Memory Collection Switched ✓</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                   Target collection: <code style={{ color: 'var(--accent-cyan)' }}>{memory.active_collection}</code>
                 </div>
               </div>
               <div style={{ position: 'relative' }}>
                 <div style={{ position: 'absolute', left: '-21px', top: '4px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-emerald)' }} />
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>3. Prompt Overrides Loaded ✓</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1d1d1f' }}>3. Prompt Overrides Loaded ✓</div>
               </div>
               <div style={{ position: 'relative' }}>
                 <div style={{ position: 'absolute', left: '-21px', top: '4px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-emerald)' }} />
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>4. Planner Ready ✓</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1d1d1f' }}>4. Planner Ready ✓</div>
               </div>
             </div>
           </div>
@@ -267,7 +267,7 @@ export default function ConfigurationPage() {
               <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Acceptance Rate</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', marginTop: '2px' }}>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1d1d1f', marginTop: '2px' }}>
                     {Math.round(metrics.acceptance_rate * 100)}%
                   </div>
                 </div>
@@ -278,7 +278,7 @@ export default function ConfigurationPage() {
                   <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Risk Catch Lead Time</div>
-                      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', marginTop: '2px' }}>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1d1d1f', marginTop: '2px' }}>
                         {metrics.risk_catch_lead_time_days} Days
                       </div>
                     </div>
@@ -299,7 +299,7 @@ export default function ConfigurationPage() {
                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Average Time To Hire</div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', marginTop: '2px' }}>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1d1d1f', marginTop: '2px' }}>
                       {metrics.time_to_hire_days} Days
                     </div>
                   </div>

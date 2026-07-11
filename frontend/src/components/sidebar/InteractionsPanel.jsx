@@ -131,7 +131,7 @@ export default function InteractionsPanel() {
               </div>
               <div className="severity-row">
                 Severity:&nbsp;
-                <strong style={{ color: SEVERITY_COLOR[signals.severity] || '#fff' }}>
+                <strong style={{ color: SEVERITY_COLOR[signals.severity] || '#1d1d1f' }}>
                   {signals.severity?.toUpperCase()}
                 </strong>
                 &nbsp;·&nbsp;Impact Score:&nbsp;

@@ -65,7 +65,7 @@ export default function InteractionModal({ isOpen, onClose, onSubmit, activeDoma
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content glass interaction-modal" onClick={(e) => e.stopPropagation()}>
         <div className="interaction-modal-header">
-          <h3 style={{ margin: 0, fontFamily: 'var(--heading-font)', color: '#fff' }}>Add Interaction</h3>
+          <h3 style={{ margin: 0, fontFamily: 'var(--heading-font)', color: '#1d1d1f' }}>Add Interaction</h3>
           <button className="btn-ui btn-secondary-ui" onClick={onClose} style={{ padding: '4px 12px', fontSize: '0.8rem' }}>Close</button>
         </div>
 

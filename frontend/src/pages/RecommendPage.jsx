@@ -386,7 +386,7 @@ export default function RecommendPage() {
                       <div className="glass" style={{ padding: '12px 16px', margin: '12px 0 20px 0', fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '6px', border: '1px solid rgba(255,255,255,0.06)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: '4px' }}>
                           <span style={{ color: 'var(--text-secondary)' }}>Provenances:</span>
-                          <span style={{ color: '#fff', fontWeight: '500' }}>
+                          <span style={{ color: '#1d1d1f', fontWeight: '500' }}>
                             {recoData.recommendation?.recommendation_sources?.length > 0
                               ? recoData.recommendation.recommendation_sources.join(', ')
                               : 'no source documents matched'}
@@ -438,14 +438,14 @@ export default function RecommendPage() {
                         />
                       ) : (
                         <div className="outcome-success">
-                          <h3 style={{ margin: '0 0 8px 0', fontSize: '1.2rem', color: '#6ee7b7' }}>
+                          <h3 style={{ margin: '0 0 8px 0', fontSize: '1.2rem', color: 'var(--accent-emerald)' }}>
                             Decision Logged
                           </h3>
                           <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                             Pipeline completed. Episodic memory updated.
                           </p>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
-                            <div>Outcome: <strong style={{ color: '#fff' }}>{outcomeResult.outcome?.toUpperCase()}</strong></div>
+                            <div>Outcome: <strong style={{ color: '#1d1d1f' }}>{outcomeResult.outcome?.toUpperCase()}</strong></div>
                             <div>Feedback ID: <code style={{ color: 'var(--accent-cyan)' }}>{outcomeResult.metadata?.outcome_feedback_id}</code></div>
                             <div>Reflection: <span style={{ color: 'var(--accent-emerald)' }}>{outcomeResult.metadata?.reflection_status}</span></div>
                           </div>
@@ -499,7 +499,7 @@ export default function RecommendPage() {
                 <div className="domain-detail-label">Success Metrics</div>
                 <div className="domain-tags">
                   {domain.success_metrics?.map(metric => (
-                    <span key={metric} className="domain-tag" style={{ color: '#6ee7b7', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+                    <span key={metric} className="domain-tag" style={{ color: 'var(--accent-emerald)', borderColor: 'var(--border-color)' }}>
                       {metric.replace(/_/g, ' ')}
                     </span>
                   ))}
@@ -545,7 +545,7 @@ export default function RecommendPage() {
       {isEditModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content glass">
-            <h3 style={{ margin: '0 0 16px 0', fontFamily: 'var(--heading-font)', color: '#fff' }}>Edit Recommendation & Approve</h3>
+            <h3 style={{ margin: '0 0 16px 0', fontFamily: 'var(--heading-font)', color: '#1d1d1f' }}>Edit Recommendation & Approve</h3>
 
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '6px' }}>Action Title</label>
