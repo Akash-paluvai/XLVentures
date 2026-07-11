@@ -14,6 +14,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict
 
+from backend.core.constants import DEFAULT_ACCEPTANCE_RATE
 from backend.core.schemas import (
     ComputedConfidence,
 )
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 def _get_historical_acceptance(domain_pack_id: str, action_title: str) -> float:
     """
     Query episodic memory to find the historical acceptance rate of a recommendation action.
-    Returns 0.85 as a default fallback if no history exists.
+    Returns DEFAULT_ACCEPTANCE_RATE as a default fallback if no history exists.
     """
     try:
         with SessionLocal() as session:
@@ -57,9 +58,9 @@ def _get_historical_acceptance(domain_pack_id: str, action_title: str) -> float:
 
             if total == 0:
                 logger.info(
-                    f"ExplanationAgent: No history found for action '{action_title}'. Using default 0.85."
+                    f"ExplanationAgent: No history found for action '{action_title}'. Using default {DEFAULT_ACCEPTANCE_RATE}."
                 )
-                return 0.85
+                return DEFAULT_ACCEPTANCE_RATE
 
             rate = approved / total
             logger.info(
@@ -68,9 +69,9 @@ def _get_historical_acceptance(domain_pack_id: str, action_title: str) -> float:
             return rate
     except Exception as e:
         logger.warning(
-            f"ExplanationAgent: Failed to query history: {e}. Using default 0.85."
+            f"ExplanationAgent: Failed to query history: {e}. Using default {DEFAULT_ACCEPTANCE_RATE}."
         )
-        return 0.85
+        return DEFAULT_ACCEPTANCE_RATE
 
 
 class ExplanationAgent:
