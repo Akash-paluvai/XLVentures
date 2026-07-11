@@ -27,7 +27,7 @@ def clear_collection(domain_pack_id: str) -> bool:
     return get_vector_store().clear_collection(domain_pack_id)
 
 
-def get_document_by_id(domain_pack_id: str, doc_id: str) -> dict:
+def get_document_by_id(domain_pack_id: str, doc_id: str) -> Dict[str, Any] | None:
     """Retrieve a specific document by its ID."""
     return get_vector_store().get_document_by_id(domain_pack_id, doc_id)
 
