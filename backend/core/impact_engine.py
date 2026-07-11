@@ -6,7 +6,7 @@ deltas across renewal, churn, and expansion dimensions.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -17,32 +17,127 @@ logger = logging.getLogger(__name__)
 
 SIGNAL_IMPACT_MAP = {
     # Customer Success signals
-    "champion_change":          {"renewal_risk_delta": 25, "churn_probability_delta": 20, "expansion_probability_delta": -15},
-    "renewal_risk":             {"renewal_risk_delta": 30, "churn_probability_delta": 15, "expansion_probability_delta": -10},
-    "usage_decline":            {"renewal_risk_delta": 20, "churn_probability_delta": 25, "expansion_probability_delta": -20},
-    "budget_freeze":            {"renewal_risk_delta": 15, "churn_probability_delta": 10, "expansion_probability_delta": -30},
-    "escalation":               {"renewal_risk_delta": 30, "churn_probability_delta": 35, "expansion_probability_delta": -25},
-    "expansion_opportunity":    {"renewal_risk_delta": -10, "churn_probability_delta": -5, "expansion_probability_delta": 25},
-    "positive_sentiment":       {"renewal_risk_delta": -10, "churn_probability_delta": -10, "expansion_probability_delta": 10},
-    "negative_sentiment":       {"renewal_risk_delta": 15, "churn_probability_delta": 20, "expansion_probability_delta": -15},
-    "executive_engagement":     {"renewal_risk_delta": -5, "churn_probability_delta": -5, "expansion_probability_delta": 10},
-    "competitive_threat":       {"renewal_risk_delta": 25, "churn_probability_delta": 30, "expansion_probability_delta": -20},
-    "pricing_objection":        {"renewal_risk_delta": 15, "churn_probability_delta": 10, "expansion_probability_delta": -15},
-    "procurement_delay":        {"renewal_risk_delta": 10, "churn_probability_delta": 5, "expansion_probability_delta": -5},
-    "product_adoption_growth":  {"renewal_risk_delta": -15, "churn_probability_delta": -10, "expansion_probability_delta": 20},
-    "churn_signal":             {"renewal_risk_delta": 35, "churn_probability_delta": 40, "expansion_probability_delta": -30},
-    "feature_request":          {"renewal_risk_delta": 5, "churn_probability_delta": 0, "expansion_probability_delta": 5},
-
+    "champion_change": {
+        "renewal_risk_delta": 25,
+        "churn_probability_delta": 20,
+        "expansion_probability_delta": -15,
+    },
+    "renewal_risk": {
+        "renewal_risk_delta": 30,
+        "churn_probability_delta": 15,
+        "expansion_probability_delta": -10,
+    },
+    "usage_decline": {
+        "renewal_risk_delta": 20,
+        "churn_probability_delta": 25,
+        "expansion_probability_delta": -20,
+    },
+    "budget_freeze": {
+        "renewal_risk_delta": 15,
+        "churn_probability_delta": 10,
+        "expansion_probability_delta": -30,
+    },
+    "escalation": {
+        "renewal_risk_delta": 30,
+        "churn_probability_delta": 35,
+        "expansion_probability_delta": -25,
+    },
+    "expansion_opportunity": {
+        "renewal_risk_delta": -10,
+        "churn_probability_delta": -5,
+        "expansion_probability_delta": 25,
+    },
+    "positive_sentiment": {
+        "renewal_risk_delta": -10,
+        "churn_probability_delta": -10,
+        "expansion_probability_delta": 10,
+    },
+    "negative_sentiment": {
+        "renewal_risk_delta": 15,
+        "churn_probability_delta": 20,
+        "expansion_probability_delta": -15,
+    },
+    "executive_engagement": {
+        "renewal_risk_delta": -5,
+        "churn_probability_delta": -5,
+        "expansion_probability_delta": 10,
+    },
+    "competitive_threat": {
+        "renewal_risk_delta": 25,
+        "churn_probability_delta": 30,
+        "expansion_probability_delta": -20,
+    },
+    "pricing_objection": {
+        "renewal_risk_delta": 15,
+        "churn_probability_delta": 10,
+        "expansion_probability_delta": -15,
+    },
+    "procurement_delay": {
+        "renewal_risk_delta": 10,
+        "churn_probability_delta": 5,
+        "expansion_probability_delta": -5,
+    },
+    "product_adoption_growth": {
+        "renewal_risk_delta": -15,
+        "churn_probability_delta": -10,
+        "expansion_probability_delta": 20,
+    },
+    "churn_signal": {
+        "renewal_risk_delta": 35,
+        "churn_probability_delta": 40,
+        "expansion_probability_delta": -30,
+    },
+    "feature_request": {
+        "renewal_risk_delta": 5,
+        "churn_probability_delta": 0,
+        "expansion_probability_delta": 5,
+    },
     # Recruitment signals
-    "candidate_dropoff":        {"renewal_risk_delta": 0, "churn_probability_delta": 30, "expansion_probability_delta": -20},
-    "competing_offer":          {"renewal_risk_delta": 0, "churn_probability_delta": 25, "expansion_probability_delta": -15},
-    "salary_concern":           {"renewal_risk_delta": 0, "churn_probability_delta": 15, "expansion_probability_delta": -10},
-    "strong_fit":               {"renewal_risk_delta": 0, "churn_probability_delta": -15, "expansion_probability_delta": 20},
-    "interview_delay":          {"renewal_risk_delta": 0, "churn_probability_delta": 10, "expansion_probability_delta": -5},
-    "positive_feedback":        {"renewal_risk_delta": 0, "churn_probability_delta": -10, "expansion_probability_delta": 15},
-    "negative_feedback":        {"renewal_risk_delta": 0, "churn_probability_delta": 20, "expansion_probability_delta": -15},
-    "urgent_hiring_need":       {"renewal_risk_delta": 0, "churn_probability_delta": 5, "expansion_probability_delta": 10},
-    "offer_acceptance_signal":  {"renewal_risk_delta": 0, "churn_probability_delta": -20, "expansion_probability_delta": 25},
+    "candidate_dropoff": {
+        "renewal_risk_delta": 0,
+        "churn_probability_delta": 30,
+        "expansion_probability_delta": -20,
+    },
+    "competing_offer": {
+        "renewal_risk_delta": 0,
+        "churn_probability_delta": 25,
+        "expansion_probability_delta": -15,
+    },
+    "salary_concern": {
+        "renewal_risk_delta": 0,
+        "churn_probability_delta": 15,
+        "expansion_probability_delta": -10,
+    },
+    "strong_fit": {
+        "renewal_risk_delta": 0,
+        "churn_probability_delta": -15,
+        "expansion_probability_delta": 20,
+    },
+    "interview_delay": {
+        "renewal_risk_delta": 0,
+        "churn_probability_delta": 10,
+        "expansion_probability_delta": -5,
+    },
+    "positive_feedback": {
+        "renewal_risk_delta": 0,
+        "churn_probability_delta": -10,
+        "expansion_probability_delta": 15,
+    },
+    "negative_feedback": {
+        "renewal_risk_delta": 0,
+        "churn_probability_delta": 20,
+        "expansion_probability_delta": -15,
+    },
+    "urgent_hiring_need": {
+        "renewal_risk_delta": 0,
+        "churn_probability_delta": 5,
+        "expansion_probability_delta": 10,
+    },
+    "offer_acceptance_signal": {
+        "renewal_risk_delta": 0,
+        "churn_probability_delta": -20,
+        "expansion_probability_delta": 25,
+    },
 }
 
 SEVERITY_THRESHOLDS = {
@@ -56,6 +151,7 @@ SEVERITY_THRESHOLDS = {
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def assess_impact(
     signals: List[str],
@@ -94,12 +190,18 @@ def assess_impact(
 
     # Compute overall impact score (0-100)
     # Weighted combination of absolute deltas
-    raw_score = (abs(renewal_delta) * 0.35 + abs(churn_delta) * 0.40 + abs(expansion_delta) * 0.25)
+    raw_score = (
+        abs(renewal_delta) * 0.35
+        + abs(churn_delta) * 0.40
+        + abs(expansion_delta) * 0.25
+    )
     impact_score = int(min(100, max(0, raw_score)))
 
     # Determine severity
     severity = "low"
-    for sev, threshold in sorted(SEVERITY_THRESHOLDS.items(), key=lambda x: x[1], reverse=True):
+    for sev, threshold in sorted(
+        SEVERITY_THRESHOLDS.items(), key=lambda x: x[1], reverse=True
+    ):
         if impact_score >= threshold:
             severity = sev
             break

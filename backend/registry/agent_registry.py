@@ -5,8 +5,7 @@ Supports registration by name with description, capabilities, and
 an optional callable agent instance.
 """
 
-from typing import Dict, Any, List, Optional
-
+from typing import Any, Dict, List, Optional
 
 # Global registry storage for agents
 _agents: Dict[str, Dict[str, Any]] = {}
@@ -59,10 +58,10 @@ def bootstrap_agents() -> None:
     Call once at application startup.
     """
     from backend.agents.context_agent import ContextAgent
-    from backend.agents.reasoning_agent import ReasoningAgent
-    from backend.agents.recommendation_agent import RecommendationAgent
     from backend.agents.explanation_agent import ExplanationAgent
     from backend.agents.learning_agent import LearningAgent
+    from backend.agents.reasoning_agent import ReasoningAgent
+    from backend.agents.recommendation_agent import RecommendationAgent
 
     ctx = ContextAgent()
     register_agent(
@@ -103,5 +102,3 @@ def bootstrap_agents() -> None:
         description=learning.description,
         capabilities=learning.capabilities,
     )
-
-

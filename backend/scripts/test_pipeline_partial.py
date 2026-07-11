@@ -14,7 +14,6 @@ Usage:
     PYTHONPATH=. python backend/scripts/test_pipeline_partial.py
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -22,46 +21,56 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from backend.registry.agent_registry import bootstrap_agents, get_agent
 from backend.core.config_loader import load_accounts
+from backend.registry.agent_registry import bootstrap_agents, get_agent
 
 SEPARATOR = "=" * 80
 SUB_SEP = "-" * 80
 
 
-def run_pipeline_for_entity(domain_pack_id: str, entity: dict, interaction: str) -> None:
+def run_pipeline_for_entity(
+    domain_pack_id: str, entity: dict, interaction: str
+) -> None:
     """Run the 3-agent pipeline for a single entity and print results."""
     # 1. Get agents from registry
     context_agent = get_agent("context_agent")["agent"]
     reasoning_agent = get_agent("reasoning_agent")["agent"]
     recommendation_agent = get_agent("recommendation_agent")["agent"]
 
-    print(f"\nRunning pipeline for: {entity.get('company_name') or entity.get('candidate_name')} (ID: {entity.get('account_id') or entity.get('candidate_id')})")
-    print(f"Interaction: \"{interaction[:120]}...\"")
+    print(
+        f"\nRunning pipeline for: {entity.get('company_name') or entity.get('candidate_name')} (ID: {entity.get('account_id') or entity.get('candidate_id')})"
+    )
+    print(f'Interaction: "{interaction[:120]}..."')
 
     # Step 1: Context Agent
-    context_out = context_agent.run({
-        "domain_pack_id": domain_pack_id,
-        "entity": entity,
-        "interaction": interaction,
-    })
+    context_out = context_agent.run(
+        {
+            "domain_pack_id": domain_pack_id,
+            "entity": entity,
+            "interaction": interaction,
+        }
+    )
 
     # Step 2: Reasoning Agent
-    reasoning_out = reasoning_agent.run({
-        "domain_pack_id": domain_pack_id,
-        "entity": entity,
-        "interaction": interaction,
-        "retrieved_context": context_out,
-    })
+    reasoning_out = reasoning_agent.run(
+        {
+            "domain_pack_id": domain_pack_id,
+            "entity": entity,
+            "interaction": interaction,
+            "retrieved_context": context_out,
+        }
+    )
 
     # Step 3: Recommendation Agent
-    recommendation_out = recommendation_agent.run({
-        "domain_pack_id": domain_pack_id,
-        "entity": entity,
-        "interaction": interaction,
-        "retrieved_context": context_out,
-        "reasoning_output": reasoning_out,
-    })
+    recommendation_out = recommendation_agent.run(
+        {
+            "domain_pack_id": domain_pack_id,
+            "entity": entity,
+            "interaction": interaction,
+            "retrieved_context": context_out,
+            "reasoning_output": reasoning_out,
+        }
+    )
 
     # Print requested outputs
     print(SUB_SEP)
@@ -92,7 +101,9 @@ def run_pipeline_for_entity(domain_pack_id: str, entity: dict, interaction: str)
         sel_marker = "[SELECTED]" if is_selected else "[REJECTED]"
         if is_selected:
             selected_action = act
-        print(f"   {idx}. {sel_marker} {act['title']} (Confidence: {act.get('confidence'):.2f}, Val: {act.get('business_value_score')}, Feas: {act.get('feasibility_score')})")
+        print(
+            f"   {idx}. {sel_marker} {act['title']} (Confidence: {act.get('confidence'):.2f}, Val: {act.get('business_value_score')}, Feas: {act.get('feasibility_score')})"
+        )
         print(f"      Description: {act['description']}")
         print(f"      Rationale: {act['rationale']}")
 
@@ -133,15 +144,21 @@ def main():
 
     # Case B: Upsell Opportunity (CloudSphere Solutions)
     acc_upsell = next(a for a in cs_accounts if a["account_id"] == "acc_cs_002")
-    run_pipeline_for_entity("customer_success", acc_upsell, acc_upsell["interaction_notes"])
+    run_pipeline_for_entity(
+        "customer_success", acc_upsell, acc_upsell["interaction_notes"]
+    )
 
     # Case C: Champion Change Risk (BioHealth Systems)
     acc_champion = next(a for a in cs_accounts if a["account_id"] == "acc_cs_003")
-    run_pipeline_for_entity("customer_success", acc_champion, acc_champion["interaction_notes"])
+    run_pipeline_for_entity(
+        "customer_success", acc_champion, acc_champion["interaction_notes"]
+    )
 
     # Case D: Escalation Risk (ZettaBytes Data)
     acc_escalation = next(a for a in cs_accounts if a["account_id"] == "acc_cs_004")
-    run_pipeline_for_entity("customer_success", acc_escalation, acc_escalation["interaction_notes"])
+    run_pipeline_for_entity(
+        "customer_success", acc_escalation, acc_escalation["interaction_notes"]
+    )
 
     # 2. Recruitment Domain Test Cases
     rec_candidates = load_accounts("recruitment")

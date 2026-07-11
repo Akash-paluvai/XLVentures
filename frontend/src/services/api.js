@@ -135,5 +135,3 @@ export async function fetchRecentInteractions(domainName, limit = 20) {
   if (!res.ok) throw new Error(`Recent interactions failed: ${res.status}`)
   return res.json()
 }
-
-

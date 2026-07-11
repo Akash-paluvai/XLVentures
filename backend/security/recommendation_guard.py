@@ -2,9 +2,12 @@
 Recommendation Guard — policy engine to validate and rewrite recommendations before they are finalized.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, Optional
 
-def validate_recommendation(rec: Dict[str, Any], account: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+
+def validate_recommendation(
+    rec: Dict[str, Any], account: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """
     Validate recommendation outputs.
     Adjusts confidence, filters destructive recommendations, rewrites absolute claims,
@@ -34,13 +37,15 @@ def validate_recommendation(rec: Dict[str, Any], account: Optional[Dict[str, Any
     )
 
     # Populate recommendation sources list
-    rec["recommendation_sources"] = [ev.get("source") for ev in evidence if ev.get("source")]
+    rec["recommendation_sources"] = [
+        ev.get("source") for ev in evidence if ev.get("source")
+    ]
 
     # Populate Confidence Calibration Metadata
     computed_conf["confidence_reason"] = {
         "evidence_count": float(evidence_count),
         "agreement": float(computed_conf.get("source_agreement", 1.0)),
-        "history": float(computed_conf.get("historical_acceptance_rate", 1.0))
+        "history": float(computed_conf.get("historical_acceptance_rate", 1.0)),
     }
     rec["computed_confidence"] = computed_conf
 
@@ -53,7 +58,7 @@ def validate_recommendation(rec: Dict[str, Any], account: Optional[Dict[str, Any
     else:
         band = "Low Confidence"
         rec["metadata"]["low_confidence_warning"] = True
-    
+
     computed_conf["confidence_band"] = band
     rec["computed_confidence"] = computed_conf
 
@@ -62,7 +67,7 @@ def validate_recommendation(rec: Dict[str, Any], account: Optional[Dict[str, Any
         title = selected_action.get("title", "")
         desc = selected_action.get("description", "")
         rationale = selected_action.get("rationale", "")
-        
+
         # Absolute statements rewrite list
         absolute_rewrites = {
             "definitely churn": "exhibits churn risk indicators",
@@ -70,7 +75,7 @@ def validate_recommendation(rec: Dict[str, Any], account: Optional[Dict[str, Any
             "will dropout": "shows disengagement indicators",
             "definitely leave": "exhibits signs of departure risk",
         }
-        
+
         # Destructive action rewrite list
         destructive_rewrites = {
             "terminate account": "initiate executive alignment call",
@@ -106,18 +111,18 @@ def validate_recommendation(rec: Dict[str, Any], account: Optional[Dict[str, Any
         for action in candidate_actions:
             act_title = action.get("title", "")
             act_desc = action.get("description", "")
-            
+
             for src, dest in absolute_rewrites.items():
                 act_title = re_sub_case_insensitive(src, dest, act_title)
                 act_desc = re_sub_case_insensitive(src, dest, act_desc)
-                
+
             for src, dest in destructive_rewrites.items():
                 act_title = re_sub_case_insensitive(src, dest, act_title)
                 act_desc = re_sub_case_insensitive(src, dest, act_desc)
-                
+
             action["title"] = act_title
             action["description"] = act_desc
-            
+
         rec["candidate_actions"] = candidate_actions
 
     # 4. Hallucination checks
@@ -128,7 +133,9 @@ def validate_recommendation(rec: Dict[str, Any], account: Optional[Dict[str, Any
 
     return rec
 
+
 def re_sub_case_insensitive(pattern: str, replacement: str, text: str) -> str:
     """Helper to do case-insensitive word replacement."""
     import re
+
     return re.sub(re.escape(pattern), replacement, text, flags=re.IGNORECASE)

@@ -1,16 +1,15 @@
-import os
 import json
 import logging
-from pathlib import Path
 import sys
+from pathlib import Path
 
 # Ensure project root is importable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from backend.core.settings import settings
+from backend.core.config_loader import load_accounts, load_domain_pack
 from backend.core.logger import setup_logging
-from backend.core.config_loader import load_domain_pack, load_accounts
+from backend.core.settings import settings
 
 # Initialize logging early
 setup_logging()
@@ -22,21 +21,27 @@ def seed_all_data():
     Checks, creates, and validates all domain packs and synthetic datasets.
     """
     logger.info("--- Starting Seeding and Validation Script ---")
-    
+
     # 1. Ensure folders exist using settings.BASE_DIR
     folders = [
         settings.BASE_DIR / "backend" / "config" / "domain_packs",
         settings.BASE_DIR / "backend" / "data" / "customer_success",
         settings.BASE_DIR / "backend" / "data" / "recruitment",
-        settings.BASE_DIR / "backend" / "docs" / "examples"
+        settings.BASE_DIR / "backend" / "docs" / "examples",
     ]
-    
+
     for f in folders:
         f.mkdir(parents=True, exist_ok=True)
         logger.info(f"Verified directory: {f}")
 
     # 2. Check and Seed Customer Success domain pack
-    cs_pack_path = settings.BASE_DIR / "backend" / "config" / "domain_packs" / "customer_success.json"
+    cs_pack_path = (
+        settings.BASE_DIR
+        / "backend"
+        / "config"
+        / "domain_packs"
+        / "customer_success.json"
+    )
     if not cs_pack_path.exists():
         cs_pack = {
             "id": "customer_success",
@@ -44,18 +49,29 @@ def seed_all_data():
             "description": "Customer Success domain pack for SaaS account management and renewal intelligence.",
             "entities": ["Customer", "Account", "Product"],
             "workflows": ["Renewal", "Upsell", "Escalation"],
-            "decision_points": ["renewal_risk", "upsell_opportunity", "champion_change_risk", "escalation_risk"],
+            "decision_points": [
+                "renewal_risk",
+                "upsell_opportunity",
+                "champion_change_risk",
+                "escalation_risk",
+            ],
             "business_rules": [],
-            "success_metrics": ["net_revenue_retention", "renewal_rate", "customer_health"],
+            "success_metrics": [
+                "net_revenue_retention",
+                "renewal_rate",
+                "customer_health",
+            ],
             "tools": [],
-            "prompt_overrides": {}
+            "prompt_overrides": {},
         }
         with open(cs_pack_path, "w") as f:
             json.dump(cs_pack, f, indent=2)
         logger.info("Seeded customer_success.json")
 
     # 3. Check and Seed Recruitment domain pack
-    rec_pack_path = settings.BASE_DIR / "backend" / "config" / "domain_packs" / "recruitment.json"
+    rec_pack_path = (
+        settings.BASE_DIR / "backend" / "config" / "domain_packs" / "recruitment.json"
+    )
     if not rec_pack_path.exists():
         rec_pack = {
             "id": "recruitment",
@@ -67,7 +83,7 @@ def seed_all_data():
             "business_rules": [],
             "success_metrics": ["time_to_hire"],
             "tools": [],
-            "prompt_overrides": {}
+            "prompt_overrides": {},
         }
         with open(rec_pack_path, "w") as f:
             json.dump(rec_pack, f, indent=2)
@@ -79,7 +95,9 @@ def seed_all_data():
         try:
             pack_data = load_domain_pack(domain)
             accounts_data = load_accounts(domain)
-            logger.info(f"✅ Domain pack '{domain}' validated successfully. Loaded {len(accounts_data)} records.")
+            logger.info(
+                f"✅ Domain pack '{domain}' validated successfully. Loaded {len(accounts_data)} records."
+            )
         except Exception as e:
             logger.error(f"❌ Validation failed for '{domain}': {str(e)}")
 

@@ -17,7 +17,7 @@ const SIGNAL_DECORATIONS = {
   product_adoption_growth: { color: '#4ade80', label: 'Product Adoption Growth' },
   churn_signal: { color: '#f87171', label: 'Churn Signal' },
   feature_request: { color: '#60a5fa', label: 'Feature Request' },
-  
+
   // Recruitment signals
   candidate_dropoff: { color: '#f87171', label: 'Candidate Dropoff' },
   competing_offer: { color: '#fb923c', label: 'Competing Offer' },

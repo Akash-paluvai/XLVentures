@@ -15,3 +15,6 @@ rapidfuzz
 sentence-transformers
 psycopg2-binary
 qdrant-client
+black
+ruff
+pre-commit

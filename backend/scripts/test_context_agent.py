@@ -32,30 +32,40 @@ def print_result(label: str, result: dict) -> None:
     print(f"  {label}")
     print(SEPARATOR)
 
-    print(f"\n📝 Interaction:")
+    print("\n📝 Interaction:")
     print(f"   {result['raw_interaction'][:200]}")
 
-    print(f"\n🔍 Generated Query:")
+    print("\n🔍 Generated Query:")
     print(f"   {result['query']}")
 
     print(f"\n📚 Retrieved Playbooks ({len(result['playbooks'])}):")
     for i, pb in enumerate(result["playbooks"], 1):
         dist = pb.get("distance", "?")
-        print(f"   {i}. {pb['id']}  (distance={dist:.4f})" if isinstance(dist, float) else f"   {i}. {pb['id']}")
+        print(
+            f"   {i}. {pb['id']}  (distance={dist:.4f})"
+            if isinstance(dist, float)
+            else f"   {i}. {pb['id']}"
+        )
 
     print(f"\n🗂️  Retrieved Past Cases ({len(result['past_cases'])}):")
     if result["past_cases"]:
         for i, case in enumerate(result["past_cases"], 1):
-            print(f"   {i}. rec_id={case['recommendation_id']}  similarity={case['similarity_score']:.1f}")
+            print(
+                f"   {i}. rec_id={case['recommendation_id']}  similarity={case['similarity_score']:.1f}"
+            )
     else:
         print("   (none)")
 
-    print(f"\n🧩 Evidence Nodes ({len(result['evidence'])}) — sorted by confidence desc:")
+    print(
+        f"\n🧩 Evidence Nodes ({len(result['evidence'])}) — sorted by confidence desc:"
+    )
     for i, ev in enumerate(result["evidence"], 1):
         snippet = ev["content"][:100].replace("\n", " ")
         rt = ev["metadata"].get("retrieval_type", "?")
-        print(f"   {i}. [{ev['source_type']}|{rt}] {ev['source']}  confidence={ev['confidence']:.2f}")
-        print(f"      \"{snippet}...\"")
+        print(
+            f"   {i}. [{ev['source_type']}|{rt}] {ev['source']}  confidence={ev['confidence']:.2f}"
+        )
+        print(f'      "{snippet}..."')
 
     print(f"\n⭐ Top Evidence: {result['metadata']['top_evidence']}")
 
@@ -66,14 +76,16 @@ def print_result(label: str, result: dict) -> None:
     else:
         print("   (none)")
 
-    print(f"\n📋 Retrieval Summary:")
+    print("\n📋 Retrieval Summary:")
     print(f"   {result['retrieval_summary']}")
 
-    print(f"\n📊 Metadata:")
+    print("\n📊 Metadata:")
     meta = result["metadata"]
-    print(f"   playbook_count={meta['playbook_count']}  "
-          f"past_case_count={meta['past_case_count']}  "
-          f"latency_ms={meta['latency_ms']}")
+    print(
+        f"   playbook_count={meta['playbook_count']}  "
+        f"past_case_count={meta['past_case_count']}  "
+        f"latency_ms={meta['latency_ms']}"
+    )
 
 
 def main():
@@ -82,20 +94,26 @@ def main():
 
     # --- Scenario 1: Renewal-risk account (acc_cs_001, health_score=42) ---
     risk_account = next(a for a in accounts if a["account_id"] == "acc_cs_001")
-    risk_result = agent.run({
-        "domain_pack_id": "customer_success",
-        "entity": risk_account,
-        "interaction": risk_account["interaction_notes"],
-    })
-    print_result("SCENARIO 1: Renewal-Risk Account (ApexAnalytics, health=42)", risk_result)
+    risk_result = agent.run(
+        {
+            "domain_pack_id": "customer_success",
+            "entity": risk_account,
+            "interaction": risk_account["interaction_notes"],
+        }
+    )
+    print_result(
+        "SCENARIO 1: Renewal-Risk Account (ApexAnalytics, health=42)", risk_result
+    )
 
     # --- Scenario 2: Healthy account (acc_cs_002, health_score=95) ---
     healthy_account = next(a for a in accounts if a["account_id"] == "acc_cs_002")
-    healthy_result = agent.run({
-        "domain_pack_id": "customer_success",
-        "entity": healthy_account,
-        "interaction": healthy_account["interaction_notes"],
-    })
+    healthy_result = agent.run(
+        {
+            "domain_pack_id": "customer_success",
+            "entity": healthy_account,
+            "interaction": healthy_account["interaction_notes"],
+        }
+    )
     print_result("SCENARIO 2: Healthy Account (CloudSphere, health=95)", healthy_result)
 
     # --- Compare ---
@@ -121,46 +139,70 @@ def main():
     checks_passed = 0
 
     if risk_ranked != healthy_ranked:
-        print(f"\n  ✅ Ranking order differs between scenarios.")
+        print("\n  ✅ Ranking order differs between scenarios.")
         checks_passed += 1
     else:
-        print(f"\n  ⚠️  Ranking order is identical.")
+        print("\n  ⚠️  Ranking order is identical.")
 
     if risk_top != healthy_top:
-        print(f"  ✅ Top-ranked playbook differs (risk={risk_top}, healthy={healthy_top}).")
+        print(
+            f"  ✅ Top-ranked playbook differs (risk={risk_top}, healthy={healthy_top})."
+        )
         checks_passed += 1
     else:
-        print(f"  ⚠️  Top-ranked playbook is the same.")
+        print("  ⚠️  Top-ranked playbook is the same.")
 
     if risk_result["query"] != healthy_result["query"]:
-        print(f"  ✅ Generated queries are different.")
+        print("  ✅ Generated queries are different.")
         checks_passed += 1
     else:
-        print(f"  ⚠️  Generated queries are identical.")
+        print("  ⚠️  Generated queries are identical.")
 
-    risk_conf = [e["confidence"] for e in risk_result["evidence"] if e["source_type"] == "playbook"]
-    healthy_conf = [e["confidence"] for e in healthy_result["evidence"] if e["source_type"] == "playbook"]
+    risk_conf = [
+        e["confidence"]
+        for e in risk_result["evidence"]
+        if e["source_type"] == "playbook"
+    ]
+    healthy_conf = [
+        e["confidence"]
+        for e in healthy_result["evidence"]
+        if e["source_type"] == "playbook"
+    ]
     if risk_conf != healthy_conf:
-        print(f"  ✅ Confidence scores differ.")
+        print("  ✅ Confidence scores differ.")
         checks_passed += 1
 
     # Verify evidence is sorted by confidence descending
     risk_all_conf = [e["confidence"] for e in risk_result["evidence"]]
     healthy_all_conf = [e["confidence"] for e in healthy_result["evidence"]]
-    if risk_all_conf == sorted(risk_all_conf, reverse=True) and healthy_all_conf == sorted(healthy_all_conf, reverse=True):
-        print(f"  ✅ Evidence is sorted by confidence descending.")
+    if risk_all_conf == sorted(
+        risk_all_conf, reverse=True
+    ) and healthy_all_conf == sorted(healthy_all_conf, reverse=True):
+        print("  ✅ Evidence is sorted by confidence descending.")
         checks_passed += 1
 
     # Verify retrieval_type metadata exists
     all_evidence = risk_result["evidence"] + healthy_result["evidence"]
-    if all(e["metadata"].get("retrieval_type") in ("semantic", "episodic") for e in all_evidence):
-        print(f"  ✅ All evidence nodes have retrieval_type metadata.")
+    if all(
+        e["metadata"].get("retrieval_type") in ("semantic", "episodic")
+        for e in all_evidence
+    ):
+        print("  ✅ All evidence nodes have retrieval_type metadata.")
         checks_passed += 1
 
     # Verify retrieval metadata exists
     for label, result in [("risk", risk_result), ("healthy", healthy_result)]:
         meta = result.get("metadata", {})
-        if all(k in meta for k in ("query", "playbook_count", "past_case_count", "top_evidence", "latency_ms")):
+        if all(
+            k in meta
+            for k in (
+                "query",
+                "playbook_count",
+                "past_case_count",
+                "top_evidence",
+                "latency_ms",
+            )
+        ):
             print(f"  ✅ {label.capitalize()} metadata has all required fields.")
             checks_passed += 1
 

@@ -8,11 +8,18 @@ string-based similarity retrieval (no embeddings).
 import json
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
-from sqlalchemy import create_engine, Column, String, Text, DateTime, ForeignKey, Boolean
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    String,
+    Text,
+    create_engine,
+)
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from backend.core.settings import settings
 
@@ -31,9 +38,12 @@ Base = declarative_base()
 
 class RecommendationRecord(Base):
     """Stores a full recommendation JSON blob keyed by entity + domain."""
+
     __tablename__ = "recommendations"
 
-    recommendation_id = Column(String, primary_key=True, default=lambda: f"rec_{uuid.uuid4().hex[:12]}")
+    recommendation_id = Column(
+        String, primary_key=True, default=lambda: f"rec_{uuid.uuid4().hex[:12]}"
+    )
     entity_id = Column(String, nullable=False, index=True)
     domain_pack_id = Column(String, nullable=False, index=True)
     recommendation_json = Column(Text, nullable=False)
@@ -48,10 +58,18 @@ class RecommendationRecord(Base):
 
 class FeedbackRecord(Base):
     """Stores human feedback tied to a specific recommendation."""
+
     __tablename__ = "feedback"
 
-    feedback_id = Column(String, primary_key=True, default=lambda: f"fb_{uuid.uuid4().hex[:12]}")
-    recommendation_id = Column(String, ForeignKey("recommendations.recommendation_id"), nullable=False, index=True)
+    feedback_id = Column(
+        String, primary_key=True, default=lambda: f"fb_{uuid.uuid4().hex[:12]}"
+    )
+    recommendation_id = Column(
+        String,
+        ForeignKey("recommendations.recommendation_id"),
+        nullable=False,
+        index=True,
+    )
     entity_id = Column(String, nullable=False, index=True)
     domain_pack_id = Column(String, nullable=False, index=True)
     human_feedback = Column(Text, nullable=True)
@@ -63,44 +81,72 @@ class FeedbackRecord(Base):
 # Create tables on import (idempotent — uses IF NOT EXISTS internally)
 Base.metadata.create_all(engine)
 
+
 def _run_db_migration():
     """Run lightweight migrations to add audit columns if missing."""
     from sqlalchemy import text
+
     try:
         with engine.begin() as conn:
             # Check recommendations columns
             try:
-                conn.execute(text("ALTER TABLE recommendations ADD COLUMN fallback_used BOOLEAN DEFAULT 0"))
+                conn.execute(
+                    text(
+                        "ALTER TABLE recommendations ADD COLUMN fallback_used BOOLEAN DEFAULT 0"
+                    )
+                )
             except Exception:
                 pass
             try:
-                conn.execute(text("ALTER TABLE recommendations ADD COLUMN model_name VARCHAR"))
+                conn.execute(
+                    text("ALTER TABLE recommendations ADD COLUMN model_name VARCHAR")
+                )
             except Exception:
                 pass
             try:
-                conn.execute(text("ALTER TABLE recommendations ADD COLUMN prompt_version VARCHAR"))
+                conn.execute(
+                    text(
+                        "ALTER TABLE recommendations ADD COLUMN prompt_version VARCHAR"
+                    )
+                )
             except Exception:
                 pass
             try:
-                conn.execute(text("ALTER TABLE recommendations ADD COLUMN domain_pack_version VARCHAR"))
+                conn.execute(
+                    text(
+                        "ALTER TABLE recommendations ADD COLUMN domain_pack_version VARCHAR"
+                    )
+                )
             except Exception:
                 pass
             try:
-                conn.execute(text("ALTER TABLE recommendations ADD COLUMN planner_version VARCHAR"))
+                conn.execute(
+                    text(
+                        "ALTER TABLE recommendations ADD COLUMN planner_version VARCHAR"
+                    )
+                )
             except Exception:
                 pass
             try:
-                conn.execute(text("ALTER TABLE recommendations ADD COLUMN recommendation_sources TEXT"))
+                conn.execute(
+                    text(
+                        "ALTER TABLE recommendations ADD COLUMN recommendation_sources TEXT"
+                    )
+                )
             except Exception:
                 pass
             # Check feedback columns
             try:
-                conn.execute(text("ALTER TABLE feedback ADD COLUMN approved_at DATETIME"))
+                conn.execute(
+                    text("ALTER TABLE feedback ADD COLUMN approved_at DATETIME")
+                )
             except Exception:
                 pass
     except Exception as e:
         import logging
+
         logging.getLogger("episodic").warning(f"Lightweight DB migration warning: {e}")
+
 
 _run_db_migration()
 
@@ -202,14 +248,16 @@ def get_similar_past_cases(
 
     results = []
     for score, row in scored[:limit]:
-        results.append({
-            "recommendation_id": row.recommendation_id,
-            "entity_id": row.entity_id,
-            "domain_pack_id": row.domain_pack_id,
-            "recommendation": json.loads(row.recommendation_json),
-            "similarity_score": score,
-            "created_at": row.created_at.isoformat() if row.created_at else None,
-        })
+        results.append(
+            {
+                "recommendation_id": row.recommendation_id,
+                "entity_id": row.entity_id,
+                "domain_pack_id": row.domain_pack_id,
+                "recommendation": json.loads(row.recommendation_json),
+                "similarity_score": score,
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+            }
+        )
     return results
 
 
@@ -231,9 +279,11 @@ def delete_recommendation(recommendation_id: str) -> bool:
             FeedbackRecord.recommendation_id == recommendation_id
         ).delete()
 
-        count = session.query(RecommendationRecord).filter(
-            RecommendationRecord.recommendation_id == recommendation_id
-        ).delete()
+        count = (
+            session.query(RecommendationRecord)
+            .filter(RecommendationRecord.recommendation_id == recommendation_id)
+            .delete()
+        )
 
         session.commit()
         return count > 0
@@ -246,13 +296,17 @@ def clear_domain_memory(domain_pack_id: str) -> int:
     Returns the total number of rows deleted.
     """
     with SessionLocal() as session:
-        fb_count = session.query(FeedbackRecord).filter(
-            FeedbackRecord.domain_pack_id == domain_pack_id
-        ).delete()
+        fb_count = (
+            session.query(FeedbackRecord)
+            .filter(FeedbackRecord.domain_pack_id == domain_pack_id)
+            .delete()
+        )
 
-        rec_count = session.query(RecommendationRecord).filter(
-            RecommendationRecord.domain_pack_id == domain_pack_id
-        ).delete()
+        rec_count = (
+            session.query(RecommendationRecord)
+            .filter(RecommendationRecord.domain_pack_id == domain_pack_id)
+            .delete()
+        )
 
         session.commit()
         return fb_count + rec_count

@@ -12,10 +12,12 @@ import json
 import logging
 import uuid
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict
 
-from backend.core.schemas import EvidenceNode, ComputedConfidence, CandidateAction, Recommendation
-from backend.memory.episodic import SessionLocal, RecommendationRecord, FeedbackRecord
+from backend.core.schemas import (
+    ComputedConfidence,
+)
+from backend.memory.episodic import FeedbackRecord, RecommendationRecord, SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,11 @@ def _get_historical_acceptance(domain_pack_id: str, action_title: str) -> float:
         with SessionLocal() as session:
             rows = (
                 session.query(FeedbackRecord, RecommendationRecord)
-                .join(RecommendationRecord, RecommendationRecord.recommendation_id == FeedbackRecord.recommendation_id)
+                .join(
+                    RecommendationRecord,
+                    RecommendationRecord.recommendation_id
+                    == FeedbackRecord.recommendation_id,
+                )
                 .filter(RecommendationRecord.domain_pack_id == domain_pack_id)
                 .all()
             )
@@ -50,14 +56,20 @@ def _get_historical_acceptance(domain_pack_id: str, action_title: str) -> float:
                     continue
 
             if total == 0:
-                logger.info(f"ExplanationAgent: No history found for action '{action_title}'. Using default 0.85.")
+                logger.info(
+                    f"ExplanationAgent: No history found for action '{action_title}'. Using default 0.85."
+                )
                 return 0.85
 
             rate = approved / total
-            logger.info(f"ExplanationAgent: Found history for action '{action_title}': {approved}/{total} ({rate:.2f}).")
+            logger.info(
+                f"ExplanationAgent: Found history for action '{action_title}': {approved}/{total} ({rate:.2f})."
+            )
             return rate
     except Exception as e:
-        logger.warning(f"ExplanationAgent: Failed to query history: {e}. Using default 0.85.")
+        logger.warning(
+            f"ExplanationAgent: Failed to query history: {e}. Using default 0.85."
+        )
         return 0.85
 
 
@@ -102,7 +114,9 @@ class ExplanationAgent:
         reasoning_output = input_data["reasoning_output"]
         recommendation_output = input_data["recommendation_output"]
 
-        entity_id = entity.get("account_id") or entity.get("candidate_id") or "unknown_entity"
+        entity_id = (
+            entity.get("account_id") or entity.get("candidate_id") or "unknown_entity"
+        )
 
         evidence = retrieved_context.get("evidence", [])
         conflicts = reasoning_output.get("conflicts", [])
@@ -117,7 +131,11 @@ class ExplanationAgent:
                 selected_action_dict = act
                 break
 
-        action_title = selected_action_dict.get("title") if selected_action_dict else "Unknown Action"
+        action_title = (
+            selected_action_dict.get("title")
+            if selected_action_dict
+            else "Unknown Action"
+        )
 
         # 2. Compute Confidence Score
         # A. Evidence node count baseline
@@ -136,7 +154,9 @@ class ExplanationAgent:
         source_agreement = max(1.0 - (0.25 * len(conflicts)), 0.0)
 
         # C. Historical acceptance rate from SQLite
-        historical_acceptance_rate = _get_historical_acceptance(domain_pack_id, action_title)
+        historical_acceptance_rate = _get_historical_acceptance(
+            domain_pack_id, action_title
+        )
 
         # D. Final Weighted Confidence Score
         score = baseline * (0.6 * source_agreement + 0.4 * historical_acceptance_rate)

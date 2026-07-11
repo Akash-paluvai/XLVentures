@@ -76,10 +76,10 @@ export default function ConfigurationPage() {
 
       {/* Main layout grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '30px' }}>
-        
+
         {/* Left Column: Domain Pack Details */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
+
           {/* Domain Metadata Info */}
           <div className="glass" style={{ padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
@@ -200,7 +200,7 @@ export default function ConfigurationPage() {
 
         {/* Right Column: Platform Metrics & Validation Timeline */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
+
           {/* Validation Checklist Card */}
           <div className="glass" style={{ padding: '24px', borderLeft: '4px solid var(--accent-emerald)' }}>
             <h3 className="domain-detail-label" style={{ marginBottom: '16px', color: 'var(--accent-emerald)' }}>

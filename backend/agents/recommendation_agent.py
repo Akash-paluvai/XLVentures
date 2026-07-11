@@ -6,12 +6,10 @@ Supports LLM recommendation generation via OpenRouter (using google/gemma-3-27b-
 provides a robust Python rule-based heuristic fallback if LLM is unavailable.
 """
 
-import os
 import json
-import time
 import logging
-import requests
-from typing import Dict, Any, List, Optional
+import os
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +43,9 @@ def _fallback_recommendations_cs(
     evidence: List[Dict[str, Any]],
     reasoning_output: Dict[str, Any],
 ) -> Dict[str, Any]:
-    playbook_ids = [ev.get("source") for ev in evidence if ev.get("source_type") == "playbook"]
+    playbook_ids = [
+        ev.get("source") for ev in evidence if ev.get("source_type") == "playbook"
+    ]
     health = entity.get("health_score", 100)
     interaction_lower = interaction.lower()
 
@@ -54,7 +54,10 @@ def _fallback_recommendations_cs(
         "renewal_risk" in playbook_ids
         or "escalation" in playbook_ids
         or health < 50
-        or any(k in interaction_lower for k in ["outage", "latency", "breach", "angry", "terminate"])
+        or any(
+            k in interaction_lower
+            for k in ["outage", "latency", "breach", "angry", "terminate"]
+        )
     ):
         candidate_actions = [
             {
@@ -94,7 +97,9 @@ def _fallback_recommendations_cs(
         selected_id = "schedule_exec_alignment"
 
     # Case 2: Champion Change
-    elif "champion_change" in playbook_ids or any(k in interaction_lower for k in ["champion", "departed", "left", "replace"]):
+    elif "champion_change" in playbook_ids or any(
+        k in interaction_lower for k in ["champion", "departed", "left", "replace"]
+    ):
         candidate_actions = [
             {
                 "id": "introductory_outreach",
@@ -136,8 +141,13 @@ def _fallback_recommendations_cs(
     elif (
         "upsell_qualification" in playbook_ids
         or health >= 80
-        and ("+" in str(entity.get("usage_trend", "")) or "increase" in str(entity.get("usage_trend", "")).lower()
-             or any(k in interaction_lower for k in ["upsell", "expand", "quota", "upgrade"]))
+        and (
+            "+" in str(entity.get("usage_trend", ""))
+            or "increase" in str(entity.get("usage_trend", "")).lower()
+            or any(
+                k in interaction_lower for k in ["upsell", "expand", "quota", "upgrade"]
+            )
+        )
     ):
         candidate_actions = [
             {
@@ -234,7 +244,13 @@ def _fallback_recommendations_recruitment(
     fit_score = entity.get("fit_score", 50)
 
     # Case 1: Candidate Dropout Risk
-    if any(k in interaction_lower for k in ["dropout", "no response", "quiet", "disengaged"]) or fit_score < 60:
+    if (
+        any(
+            k in interaction_lower
+            for k in ["dropout", "no response", "quiet", "disengaged"]
+        )
+        or fit_score < 60
+    ):
         candidate_actions = [
             {
                 "id": "reengage_outreach",
@@ -385,46 +401,46 @@ class RecommendationAgent:
                     prompt += f"Evidence {idx} ({ev.get('source_type')}): {ev.get('content')[:200]}\n\n"
 
                 prompt += (
-                    f"Output your recommendations in a valid JSON object matching the following structure exactly:\n"
-                    f"{{\n"
-                    f"  \"candidate_actions\": [\n"
-                    f"    {{\n"
-                    f"      \"id\": \"unique_action_id_1\",\n"
-                    f"      \"title\": \"Clear action title\",\n"
-                    f"      \"description\": \"Detailed description of action\",\n"
-                    f"      \"rationale\": \"Why this action is proposed\",\n"
-                    f"      \"expected_impact\": \"Expected outcome\",\n"
-                    f"      \"confidence\": 0.90,\n"
-                    f"      \"business_value_score\": 90.0,\n"
-                    f"      \"feasibility_score\": 85.0,\n"
-                    f"      \"rejected_reason\": null\n"
-                    f"    }},\n"
-                    f"    {{\n"
-                    f"      \"id\": \"unique_action_id_2\",\n"
-                    f"      \"title\": \"Second option title\",\n"
-                    f"      \"description\": \"Detailed description\",\n"
-                    f"      \"rationale\": \"Why this option was considered\",\n"
-                    f"      \"expected_impact\": \"Expected outcome\",\n"
-                    f"      \"confidence\": 0.80,\n"
-                    f"      \"business_value_score\": 80.0,\n"
-                    f"      \"feasibility_score\": 90.0,\n"
-                    f"      \"rejected_reason\": \"A detailed reason why this action was NOT selected as the primary next best action.\"\n"
-                    f"    }},\n"
-                    f"    {{\n"
-                    f"      \"id\": \"unique_action_id_3\",\n"
-                    f"      \"title\": \"Third option title\",\n"
-                    f"      \"description\": \"Detailed description\",\n"
-                    f"      \"rationale\": \"Why this option was considered\",\n"
-                    f"      \"expected_impact\": \"Expected outcome\",\n"
-                    f"      \"confidence\": 0.70,\n"
-                    f"      \"business_value_score\": 70.0,\n"
-                    f"      \"feasibility_score\": 75.0,\n"
-                    f"      \"rejected_reason\": \"A detailed reason why this action was NOT selected as the primary next best action.\"\n"
-                    f"    }}\n"
-                    f"  ],\n"
-                    f"  \"selected_action_id\": \"unique_action_id_1\"\n"
-                    f"}}\n"
-                    f"Output ONLY valid raw JSON. Do not write markdown blocks or backticks."
+                    "Output your recommendations in a valid JSON object matching the following structure exactly:\n"
+                    "{\n"
+                    '  "candidate_actions": [\n'
+                    "    {\n"
+                    '      "id": "unique_action_id_1",\n'
+                    '      "title": "Clear action title",\n'
+                    '      "description": "Detailed description of action",\n'
+                    '      "rationale": "Why this action is proposed",\n'
+                    '      "expected_impact": "Expected outcome",\n'
+                    '      "confidence": 0.90,\n'
+                    '      "business_value_score": 90.0,\n'
+                    '      "feasibility_score": 85.0,\n'
+                    '      "rejected_reason": null\n'
+                    "    },\n"
+                    "    {\n"
+                    '      "id": "unique_action_id_2",\n'
+                    '      "title": "Second option title",\n'
+                    '      "description": "Detailed description",\n'
+                    '      "rationale": "Why this option was considered",\n'
+                    '      "expected_impact": "Expected outcome",\n'
+                    '      "confidence": 0.80,\n'
+                    '      "business_value_score": 80.0,\n'
+                    '      "feasibility_score": 90.0,\n'
+                    '      "rejected_reason": "A detailed reason why this action was NOT selected as the primary next best action."\n'
+                    "    },\n"
+                    "    {\n"
+                    '      "id": "unique_action_id_3",\n'
+                    '      "title": "Third option title",\n'
+                    '      "description": "Detailed description",\n'
+                    '      "rationale": "Why this option was considered",\n'
+                    '      "expected_impact": "Expected outcome",\n'
+                    '      "confidence": 0.70,\n'
+                    '      "business_value_score": 70.0,\n'
+                    '      "feasibility_score": 75.0,\n'
+                    '      "rejected_reason": "A detailed reason why this action was NOT selected as the primary next best action."\n'
+                    "    }\n"
+                    "  ],\n"
+                    '  "selected_action_id": "unique_action_id_1"\n'
+                    "}\n"
+                    "Output ONLY valid raw JSON. Do not write markdown blocks or backticks."
                 )
 
                 resp_json = call_llm(
@@ -437,33 +453,50 @@ class RecommendationAgent:
                         "model": _OPENROUTER_MODEL,
                         "messages": [
                             {"role": "system", "content": system_instruction},
-                            {"role": "user", "content": prompt}
+                            {"role": "user", "content": prompt},
                         ],
                         "max_tokens": 800,
                         "temperature": 0.2,
                     },
                 )
-                result_json = _clean_json_response(resp_json["choices"][0]["message"]["content"])
+                result_json = _clean_json_response(
+                    resp_json["choices"][0]["message"]["content"]
+                )
 
                 # Validate structure
-                if "candidate_actions" in result_json and "selected_action_id" in result_json:
+                if (
+                    "candidate_actions" in result_json
+                    and "selected_action_id" in result_json
+                ):
                     actions = result_json["candidate_actions"]
                     if len(actions) == 3:
-                        logger.info("RecommendationAgent: successfully generated ranked actions using LLM.")
+                        logger.info(
+                            "RecommendationAgent: successfully generated ranked actions using LLM."
+                        )
                         return result_json
                     else:
-                        logger.warning(f"RecommendationAgent: LLM generated {len(actions)} actions instead of 3. Falling back.")
+                        logger.warning(
+                            f"RecommendationAgent: LLM generated {len(actions)} actions instead of 3. Falling back."
+                        )
                 else:
-                    logger.warning("RecommendationAgent: LLM JSON was missing keys. Falling back.")
+                    logger.warning(
+                        "RecommendationAgent: LLM JSON was missing keys. Falling back."
+                    )
 
             except Exception as e:
-                logger.warning(f"RecommendationAgent: LLM execution failed (non-fatal): {e}. Falling back to rules.")
+                logger.warning(
+                    f"RecommendationAgent: LLM execution failed (non-fatal): {e}. Falling back to rules."
+                )
 
         # Fallback Heuristics
         if domain_pack_id == "customer_success":
-            return _fallback_recommendations_cs(entity, interaction, evidence, reasoning_output)
+            return _fallback_recommendations_cs(
+                entity, interaction, evidence, reasoning_output
+            )
         elif domain_pack_id == "recruitment":
-            return _fallback_recommendations_recruitment(entity, interaction, evidence, reasoning_output)
+            return _fallback_recommendations_recruitment(
+                entity, interaction, evidence, reasoning_output
+            )
         else:
             # Domain-agnostic generic fallback
             return {

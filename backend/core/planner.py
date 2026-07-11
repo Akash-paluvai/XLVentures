@@ -5,23 +5,27 @@ Constructs the LangGraph StateGraph mapping state flow from Context Agent to
 Learning Agent, using checkpointer-based human interrupts and dynamic routing paths.
 """
 
-import os
 import json
 import logging
+import os
 import time
-import requests
-from typing import Dict, Any, List
+import uuid
+from datetime import datetime, timezone
+from typing import Any, Dict
 
-from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import END, StateGraph
 
+from backend.core.agent_executor import execute_agent
 from backend.core.state import PlatformState
 from backend.registry.agent_registry import get_agent
 
 # Safety and guardrail imports
-from backend.security.prompt_guard import contains_prompt_injection, sanitize_interaction
+from backend.security.prompt_guard import (
+    contains_prompt_injection,
+    sanitize_interaction,
+)
 from backend.security.recommendation_guard import validate_recommendation
-from backend.core.agent_executor import execute_agent
 
 logger = logging.getLogger(__name__)
 
@@ -36,31 +40,41 @@ planner_traces: Dict[str, Any] = {}
 MAX_GRAPH_DEPTH = 10
 MAX_AGENT_EXECUTIONS = 20
 
-def _record_step(state: PlatformState, agent_name: str, started_at: float,
-                 duration_ms: float, input_summary: str, output_summary: str,
-                 status: str = "completed", metadata: dict = None):
+
+def _record_step(
+    state: PlatformState,
+    agent_name: str,
+    started_at: float,
+    duration_ms: float,
+    input_summary: str,
+    output_summary: str,
+    status: str = "completed",
+    metadata: dict = None,
+):
     """Append an agent execution step to the trace for this thread with safety loop protection."""
     thread_id = (state.get("metadata") or {}).get("thread_id")
     if not thread_id:
         return
     planner_traces.setdefault(thread_id, {"steps": []})
     steps = planner_traces[thread_id]["steps"]
-    
+
     # Loop protection threshold check
     if len(steps) >= MAX_AGENT_EXECUTIONS:
         msg = f"Planner Safety Loop protection triggered! Exceeded limit of {MAX_AGENT_EXECUTIONS} agent executions."
         logger.critical(msg)
         raise RuntimeError(msg)
 
-    planner_traces[thread_id]["steps"].append({
-        "agent": agent_name,
-        "status": status,
-        "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(started_at)),
-        "duration_ms": round(duration_ms),
-        "input_summary": input_summary,
-        "output_summary": output_summary,
-        "metadata": metadata or {},
-    })
+    planner_traces[thread_id]["steps"].append(
+        {
+            "agent": agent_name,
+            "status": status,
+            "started_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(started_at)),
+            "duration_ms": round(duration_ms),
+            "input_summary": input_summary,
+            "output_summary": output_summary,
+            "metadata": metadata or {},
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -104,16 +118,21 @@ def _entity_summary(state: PlatformState) -> str:
 # LangGraph Nodes
 # ---------------------------------------------------------------------------
 
+
 def planner_node(state: PlatformState) -> dict:
     """Classifies the situation as needing 'escalation' or 'standard' processing."""
     t0 = time.time()
 
-    raw_interaction = state.get("account", {}).get("interaction_notes", "") or state.get("account", {}).get("recruiter_notes", "") or ""
-    
+    raw_interaction = (
+        state.get("account", {}).get("interaction_notes", "")
+        or state.get("account", {}).get("recruiter_notes", "")
+        or ""
+    )
+
     # Run Prompt Injection checks
     injection_detected = contains_prompt_injection(raw_interaction)
     interaction = sanitize_interaction(raw_interaction)
-    
+
     # Store sanitized note back in account state (mutates local copy for prompts)
     if "interaction_notes" in state.get("account", {}):
         state["account"]["interaction_notes"] = interaction
@@ -122,24 +141,40 @@ def planner_node(state: PlatformState) -> dict:
 
     health = state.get("account", {}).get("health_score")
     fit_score = state.get("account", {}).get("fit_score")
-    
+
     interaction_lower = interaction.lower()
     is_urgent = False
-    
+
     # CS critical signals
     if health is not None and health < 50:
         is_urgent = True
-    if any(k in interaction_lower for k in ["outage", "latency", "breach", "angry", "terminate", "churn", "decline", "left", "departed"]):
+    if any(
+        k in interaction_lower
+        for k in [
+            "outage",
+            "latency",
+            "breach",
+            "angry",
+            "terminate",
+            "churn",
+            "decline",
+            "left",
+            "departed",
+        ]
+    ):
         is_urgent = True
-        
+
     # Recruitment critical signals
     if fit_score is not None and fit_score < 60:
         is_urgent = True
-    if any(k in interaction_lower for k in ["dropout", "no response", "quiet", "disengaged", "counter"]):
+    if any(
+        k in interaction_lower
+        for k in ["dropout", "no response", "quiet", "disengaged", "counter"]
+    ):
         is_urgent = True
-        
+
     path = "escalation" if is_urgent else "standard"
-    
+
     # Try LLM classification if API key is set
     if _OPENROUTER_API_KEY:
         try:
@@ -153,9 +188,9 @@ def planner_node(state: PlatformState) -> dict:
                 f"Classify this interaction note and entity context as 'escalation' or 'standard'.\n"
                 f"Choose 'escalation' if there are risks of churn, outages, SLA issues, champion departure, candidate disengagement, or salary negotiation.\n"
                 f"Otherwise choose 'standard'.\n\n"
-                f"Interaction: \"{interaction}\"\n"
+                f'Interaction: "{interaction}"\n'
                 f"Entity Details: {json.dumps(state.get('account'))}\n\n"
-                f"Format output as JSON: {{\"path\": \"escalation\" or \"standard\"}}\n"
+                f'Format output as JSON: {{"path": "escalation" or "standard"}}\n'
                 f"Output raw JSON only."
             )
             resp_json = call_llm(
@@ -168,13 +203,15 @@ def planner_node(state: PlatformState) -> dict:
                     "model": _OPENROUTER_MODEL,
                     "messages": [
                         {"role": "system", "content": system_instruction},
-                        {"role": "user", "content": prompt}
+                        {"role": "user", "content": prompt},
                     ],
                     "max_tokens": 50,
                     "temperature": 0.1,
                 },
             )
-            res_json = _clean_json_response(resp_json["choices"][0]["message"]["content"])
+            res_json = _clean_json_response(
+                resp_json["choices"][0]["message"]["content"]
+            )
             val = res_json.get("path", "standard")
             if val in ["escalation", "standard"]:
                 path = val
@@ -189,7 +226,7 @@ def planner_node(state: PlatformState) -> dict:
     }
 
     duration_ms = (time.time() - t0) * 1000
-    
+
     # Build reason string
     reasons = []
     if health is not None and health < 50:
@@ -202,12 +239,19 @@ def planner_node(state: PlatformState) -> dict:
         reasons.append("No urgent signals detected")
 
     _record_step(
-        state, "planner", t0, duration_ms,
+        state,
+        "planner",
+        t0,
+        duration_ms,
         input_summary=_entity_summary(state),
         output_summary=f"Classification: {path}. {'. '.join(reasons)}.",
-        metadata={"routing_path": path, "reason": reasons, "prompt_injection_detected": injection_detected}
+        metadata={
+            "routing_path": path,
+            "reason": reasons,
+            "prompt_injection_detected": injection_detected,
+        },
     )
-    
+
     logger.info(f"PlannerAgent: Classified interaction path as '{path}'.")
     return {"metadata": meta}
 
@@ -222,24 +266,34 @@ def context_node(state: PlatformState) -> dict:
         {
             "domain_pack_id": state["domain_pack"]["id"],
             "entity": state["account"],
-            "interaction": state["account"].get("interaction_notes") or state["account"].get("recruiter_notes") or "",
-        }
+            "interaction": state["account"].get("interaction_notes")
+            or state["account"].get("recruiter_notes")
+            or "",
+        },
     )
 
     out = res["result"]
     fallback_used = res["fallback_used"]
-    
+
     if not res["success"]:
         # Direct fallback context
         out = {
-            "raw_interaction": state["account"].get("interaction_notes") or state["account"].get("recruiter_notes") or "",
+            "raw_interaction": state["account"].get("interaction_notes")
+            or state["account"].get("recruiter_notes")
+            or "",
             "query": "fallback retrieve",
             "playbooks": [],
             "past_cases": [],
             "evidence": [],
             "retrieval_summary": "Heuristic Context Retrieval Fallback",
             "missing_information": [],
-            "metadata": {"query": "fallback", "playbook_count": 0, "past_case_count": 0, "top_evidence": "none", "latency_ms": 0},
+            "metadata": {
+                "query": "fallback",
+                "playbook_count": 0,
+                "past_case_count": 0,
+                "top_evidence": "none",
+                "latency_ms": 0,
+            },
         }
 
     duration_ms = (time.time() - t0) * 1000
@@ -247,13 +301,20 @@ def context_node(state: PlatformState) -> dict:
     # Build retrieved items list for display
     retrieved_items = []
     for pb in out.get("playbooks", []):
-        retrieved_items.append(f"✓ {pb.get('id', 'Playbook').replace('_', ' ').title()}")
+        retrieved_items.append(
+            f"✓ {pb.get('id', 'Playbook').replace('_', ' ').title()}"
+        )
     for i, case in enumerate(out.get("past_cases", [])):
-        retrieved_items.append(f"✓ Similar Case #{case.get('recommendation_id', i + 1)}")
+        retrieved_items.append(
+            f"✓ Similar Case #{case.get('recommendation_id', i + 1)}"
+        )
 
     ctx_meta = out.get("metadata", {})
     _record_step(
-        state, "context", t0, duration_ms,
+        state,
+        "context",
+        t0,
+        duration_ms,
         input_summary=f"Query: {ctx_meta.get('query', 'N/A')}",
         output_summary=f"Retrieved {ctx_meta.get('playbook_count', 0)} playbook(s), {ctx_meta.get('past_case_count', 0)} similar case(s). Top: {ctx_meta.get('top_evidence', 'none')}.",
         metadata={
@@ -266,7 +327,7 @@ def context_node(state: PlatformState) -> dict:
             "missing_information": out.get("missing_information", []),
             "fallback_used": fallback_used,
             "error": res["error"],
-        }
+        },
     )
 
     return {
@@ -285,9 +346,11 @@ def reasoning_node(state: PlatformState) -> dict:
         {
             "domain_pack_id": state["domain_pack"]["id"],
             "entity": state["account"],
-            "interaction": state["account"].get("interaction_notes") or state["account"].get("recruiter_notes") or "",
+            "interaction": state["account"].get("interaction_notes")
+            or state["account"].get("recruiter_notes")
+            or "",
             "retrieved_context": state["retrieved_context"],
-        }
+        },
     )
 
     out = res["result"]
@@ -295,17 +358,25 @@ def reasoning_node(state: PlatformState) -> dict:
 
     if not res["success"]:
         # Fallback to rules import
-        from backend.agents.reasoning_agent import _heuristic_reasoning_cs, _heuristic_reasoning_recruitment
+        from backend.agents.reasoning_agent import (
+            _heuristic_reasoning_cs,
+            _heuristic_reasoning_recruitment,
+        )
+
         domain_pack_id = state["domain_pack"]["id"]
         entity = state["account"]
-        interaction = entity.get("interaction_notes") or entity.get("recruiter_notes") or ""
+        interaction = (
+            entity.get("interaction_notes") or entity.get("recruiter_notes") or ""
+        )
         evidence = state["retrieved_context"].get("evidence", [])
         missing_info = state["retrieved_context"].get("missing_information", [])
 
         if domain_pack_id == "customer_success":
             out = _heuristic_reasoning_cs(entity, interaction, evidence, missing_info)
         else:
-            out = _heuristic_reasoning_recruitment(entity, interaction, evidence, missing_info)
+            out = _heuristic_reasoning_recruitment(
+                entity, interaction, evidence, missing_info
+            )
 
     duration_ms = (time.time() - t0) * 1000
 
@@ -314,7 +385,10 @@ def reasoning_node(state: PlatformState) -> dict:
     missing = out.get("missing_information", [])
 
     _record_step(
-        state, "reasoning", t0, duration_ms,
+        state,
+        "reasoning",
+        t0,
+        duration_ms,
         input_summary=f"Context with {len(state.get('evidence', []))} evidence nodes",
         output_summary=f"{len(risks)} risk(s), {len(opps)} opportunity(ies), {len(missing)} missing field(s).",
         metadata={
@@ -324,7 +398,7 @@ def reasoning_node(state: PlatformState) -> dict:
             "reasoning_summary": out.get("reasoning_summary", ""),
             "fallback_used": fallback_used,
             "error": res["error"],
-        }
+        },
     )
 
     return {"reasoning_output": out}
@@ -340,10 +414,12 @@ def recommendation_node(state: PlatformState) -> dict:
         {
             "domain_pack_id": state["domain_pack"]["id"],
             "entity": state["account"],
-            "interaction": state["account"].get("interaction_notes") or state["account"].get("recruiter_notes") or "",
+            "interaction": state["account"].get("interaction_notes")
+            or state["account"].get("recruiter_notes")
+            or "",
             "retrieved_context": state["retrieved_context"],
             "reasoning_output": state["reasoning_output"],
-        }
+        },
     )
 
     out = res["result"]
@@ -351,17 +427,27 @@ def recommendation_node(state: PlatformState) -> dict:
 
     if not res["success"]:
         # Fallback to rules import
-        from backend.agents.recommendation_agent import _fallback_recommendations_cs, _fallback_recommendations_recruitment
+        from backend.agents.recommendation_agent import (
+            _fallback_recommendations_cs,
+            _fallback_recommendations_recruitment,
+        )
+
         domain_pack_id = state["domain_pack"]["id"]
         entity = state["account"]
-        interaction = entity.get("interaction_notes") or entity.get("recruiter_notes") or ""
+        interaction = (
+            entity.get("interaction_notes") or entity.get("recruiter_notes") or ""
+        )
         evidence = state["retrieved_context"].get("evidence", [])
         reasoning_output = state["reasoning_output"]
 
         if domain_pack_id == "customer_success":
-            out = _fallback_recommendations_cs(entity, interaction, evidence, reasoning_output)
+            out = _fallback_recommendations_cs(
+                entity, interaction, evidence, reasoning_output
+            )
         else:
-            out = _fallback_recommendations_recruitment(entity, interaction, evidence, reasoning_output)
+            out = _fallback_recommendations_recruitment(
+                entity, interaction, evidence, reasoning_output
+            )
 
     duration_ms = (time.time() - t0) * 1000
 
@@ -370,7 +456,10 @@ def recommendation_node(state: PlatformState) -> dict:
     selected = next((a for a in actions if a.get("id") == selected_id), None)
 
     _record_step(
-        state, "recommendation", t0, duration_ms,
+        state,
+        "recommendation",
+        t0,
+        duration_ms,
         input_summary=f"Reasoning with {len(state.get('reasoning_output', {}).get('risks', []))} risks",
         output_summary=f"Generated {len(actions)} candidate action(s). Selected: {selected.get('title', 'N/A') if selected else 'N/A'}.",
         metadata={
@@ -386,7 +475,7 @@ def recommendation_node(state: PlatformState) -> dict:
             ],
             "fallback_used": fallback_used,
             "error": res["error"],
-        }
+        },
     )
 
     return {"recommendation_output": out}
@@ -397,13 +486,15 @@ def generate_standard_recommendation_node(state: PlatformState) -> dict:
     t0 = time.time()
 
     domain_id = state["domain_pack"]["id"]
-    
+
     # Stub reasoning output
     reasoning_output = {
         "reasoning_summary": "Account is operating within normal boundaries. No critical risks identified.",
         "risks": [],
         "opportunities": ["Regular touchpoint to build relationship stability."],
-        "missing_information": state["retrieved_context"].get("missing_information", []),
+        "missing_information": state["retrieved_context"].get(
+            "missing_information", []
+        ),
         "conflicts": [],
     }
 
@@ -487,14 +578,17 @@ def generate_standard_recommendation_node(state: PlatformState) -> dict:
         }
 
     duration_ms = (time.time() - t0) * 1000
-    
+
     actions = recommendation_output["candidate_actions"]
     selected_id = recommendation_output["selected_action_id"]
     selected = next((a for a in actions if a.get("id") == selected_id), None)
 
     # Record both reasoning and recommendation steps for standard path
     _record_step(
-        state, "reasoning", t0, duration_ms * 0.4,
+        state,
+        "reasoning",
+        t0,
+        duration_ms * 0.4,
         input_summary=f"Context with {len(state.get('evidence', []))} evidence nodes",
         output_summary="No critical risks. Standard cadence recommended.",
         metadata={
@@ -502,11 +596,14 @@ def generate_standard_recommendation_node(state: PlatformState) -> dict:
             "opportunities": reasoning_output["opportunities"],
             "missing_information": reasoning_output.get("missing_information", []),
             "reasoning_summary": reasoning_output["reasoning_summary"],
-        }
+        },
     )
 
     _record_step(
-        state, "recommendation", t0 + (duration_ms * 0.4 / 1000), duration_ms * 0.6,
+        state,
+        "recommendation",
+        t0 + (duration_ms * 0.4 / 1000),
+        duration_ms * 0.6,
         input_summary="Standard path — no escalation risks",
         output_summary=f"Generated {len(actions)} candidate action(s). Selected: {selected.get('title', 'N/A') if selected else 'N/A'}.",
         metadata={
@@ -520,7 +617,7 @@ def generate_standard_recommendation_node(state: PlatformState) -> dict:
                 }
                 for a in actions
             ],
-        }
+        },
     )
 
     return {
@@ -539,11 +636,13 @@ def explanation_node(state: PlatformState) -> dict:
         {
             "domain_pack_id": state["domain_pack"]["id"],
             "entity": state["account"],
-            "interaction": state["account"].get("interaction_notes") or state["account"].get("recruiter_notes") or "",
+            "interaction": state["account"].get("interaction_notes")
+            or state["account"].get("recruiter_notes")
+            or "",
             "retrieved_context": state["retrieved_context"],
             "reasoning_output": state["reasoning_output"],
             "recommendation_output": state["recommendation_output"],
-        }
+        },
     )
 
     out = res["result"]
@@ -560,10 +659,21 @@ def explanation_node(state: PlatformState) -> dict:
         }
         out = {
             "recommendation_id": f"rec_fb_{uuid.uuid4().hex[:8]}",
-            "entity_id": state["account"].get("account_id") or state["account"].get("candidate_id") or "unknown",
+            "entity_id": state["account"].get("account_id")
+            or state["account"].get("candidate_id")
+            or "unknown",
             "domain_pack_id": state["domain_pack"]["id"],
-            "candidate_actions": state["recommendation_output"].get("candidate_actions", []),
-            "selected_action": next((a for a in state["recommendation_output"].get("candidate_actions", []) if a.get("rejected_reason") is None), None),
+            "candidate_actions": state["recommendation_output"].get(
+                "candidate_actions", []
+            ),
+            "selected_action": next(
+                (
+                    a
+                    for a in state["recommendation_output"].get("candidate_actions", [])
+                    if a.get("rejected_reason") is None
+                ),
+                None,
+            ),
             "evidence": evidence,
             "reasoning_trace": ["Explanation Agent Failed. Heuristic Fallback Used."],
             "computed_confidence": computed_conf,
@@ -574,16 +684,18 @@ def explanation_node(state: PlatformState) -> dict:
     # Run recommendation safety guardrails
     out = validate_recommendation(out, state["account"])
     score = out.get("computed_confidence", {}).get("score", 1.0)
-    
+
     # LOW-CONFIDENCE ADVISORY FALLBACK ROUTING
     # If confidence is below 0.60, or evidence count is 0, rewrite the output to a Request Info advisory
     evidence_count = len(out.get("evidence", []))
     low_confidence_fallback = False
-    
+
     if score < 0.60 or evidence_count == 0:
         low_confidence_fallback = True
-        logger.warning(f"Confidence score {score} is below safe threshold (0.60) or evidence missing. Overriding recommendation with Request More Information advisory.")
-        
+        logger.warning(
+            f"Confidence score {score} is below safe threshold (0.60) or evidence missing. Overriding recommendation with Request More Information advisory."
+        )
+
         advisory_action = {
             "id": "request_more_information",
             "title": "Request More Information & Context",
@@ -593,23 +705,29 @@ def explanation_node(state: PlatformState) -> dict:
             "confidence": float(score),
             "rejected_reason": None,
         }
-        
+
         # Override action in output
         out["selected_action"] = advisory_action
-        
+
         # Mark other options as rejected due to low confidence safety override
         for act in out.get("candidate_actions", []):
-            act["rejected_reason"] = "Advisory safety override triggered. Action postponed pending information request."
-        
+            act[
+                "rejected_reason"
+            ] = "Advisory safety override triggered. Action postponed pending information request."
+
         out["candidate_actions"] = [advisory_action] + out.get("candidate_actions", [])
         out["computed_confidence"]["confidence_band"] = "Low Confidence"
         out["metadata"]["low_confidence_fallback"] = True
 
     # Record audit metadata in trace
     out["metadata"]["fallback_used"] = fallback_used
-    out["metadata"]["model_name"] = _OPENROUTER_MODEL if _OPENROUTER_API_KEY else "local_heuristics"
+    out["metadata"]["model_name"] = (
+        _OPENROUTER_MODEL if _OPENROUTER_API_KEY else "local_heuristics"
+    )
     out["metadata"]["prompt_version"] = "v1.2.0"
-    out["metadata"]["domain_pack_version"] = state["domain_pack"].get("version", "v1.0.0")
+    out["metadata"]["domain_pack_version"] = state["domain_pack"].get(
+        "version", "v1.0.0"
+    )
     out["metadata"]["planner_version"] = "v1.5.2"
     out["metadata"]["low_confidence_fallback_triggered"] = low_confidence_fallback
 
@@ -617,7 +735,10 @@ def explanation_node(state: PlatformState) -> dict:
 
     conf = out.get("computed_confidence", {})
     _record_step(
-        state, "explanation", t0, duration_ms,
+        state,
+        "explanation",
+        t0,
+        duration_ms,
         input_summary=f"Recommendation + {len(state.get('evidence', []))} evidence nodes",
         output_summary=f"Confidence: {round(conf.get('score', 0) * 100)}% ({conf.get('confidence_band')}). Low conf fallback: {low_confidence_fallback}.",
         metadata={
@@ -629,9 +750,9 @@ def explanation_node(state: PlatformState) -> dict:
             "fallback_used": fallback_used,
             "low_confidence_fallback": low_confidence_fallback,
             "error": res["error"],
-        }
+        },
     )
-    
+
     return {
         "explanation_output": out,
         "evidence": out.get("evidence", []),
@@ -645,7 +766,10 @@ def human_approval_node(state: PlatformState) -> dict:
     logger.info("PlannerAgent: human approval node entered/resumed.")
 
     _record_step(
-        state, "human_approval", t0, 0,
+        state,
+        "human_approval",
+        t0,
+        0,
         input_summary="Recommendation ready for human review",
         output_summary="Awaiting approval/edit/reject",
         status="paused",
@@ -659,16 +783,20 @@ def learning_node(state: PlatformState) -> dict:
     t0 = time.time()
 
     agent = get_agent("learning_agent")["agent"]
-    
+
     # Extract outcome and feedback from state or set default
     feedback_dict = state.get("human_feedback") or {}
     outcome = feedback_dict.get("outcome", "approved")
     human_feedback = feedback_dict.get("feedback_text", "Approved automatically.")
-    
+
     # Explanation output acts as the final recommendation payload
     rec = state["explanation_output"]
     domain_id = state["domain_pack"]["id"]
-    entity_id = state["account"]["account_id"] if domain_id == "customer_success" else state["account"]["candidate_id"]
+    entity_id = (
+        state["account"]["account_id"]
+        if domain_id == "customer_success"
+        else state["account"]["candidate_id"]
+    )
 
     # Write outcome to SQLite episodic memory
     fb_id = agent.write_outcome(
@@ -685,7 +813,10 @@ def learning_node(state: PlatformState) -> dict:
     duration_ms = (time.time() - t0) * 1000
 
     _record_step(
-        state, "learning", t0, duration_ms,
+        state,
+        "learning",
+        t0,
+        duration_ms,
         input_summary=f"Outcome: {outcome}. Feedback: {human_feedback[:80]}",
         output_summary=f"Episodic memory updated. Reflection: {reflection.get('status', 'unknown')}.",
         metadata={
@@ -694,7 +825,7 @@ def learning_node(state: PlatformState) -> dict:
             "reflection_status": reflection.get("status"),
             "recommendation_saved": True,
             "feedback_saved": True,
-        }
+        },
     )
 
     meta = state.get("metadata") or {}
@@ -709,6 +840,7 @@ def learning_node(state: PlatformState) -> dict:
 # ---------------------------------------------------------------------------
 # Routing edges
 # ---------------------------------------------------------------------------
+
 
 def route_after_context(state: PlatformState) -> str:
     """Route standard vs escalation flows after context ingestion."""
@@ -729,7 +861,9 @@ workflow.add_node("planner_node", planner_node)
 workflow.add_node("context_node", context_node)
 workflow.add_node("reasoning_node", reasoning_node)
 workflow.add_node("recommendation_node", recommendation_node)
-workflow.add_node("generate_standard_recommendation", generate_standard_recommendation_node)
+workflow.add_node(
+    "generate_standard_recommendation", generate_standard_recommendation_node
+)
 workflow.add_node("explanation_node", explanation_node)
 workflow.add_node("human_approval_node", human_approval_node)
 workflow.add_node("learning_node", learning_node)
@@ -747,7 +881,7 @@ workflow.add_conditional_edges(
     {
         "escalation_route": "reasoning_node",
         "standard_route": "generate_standard_recommendation",
-    }
+    },
 )
 
 # Connect escalation path

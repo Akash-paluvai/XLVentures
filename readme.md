@@ -1,6 +1,12 @@
 # Intelligent Next Best Action Platform
 ### XLVentures.AI Hackathon Submission
 
+[![Build Status](https://github.com/Akash-paluvai/XLVentures/actions/workflows/ci.yml/badge.svg)](https://github.com/Akash-paluvai/XLVentures/actions)
+[![Python Version](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
+[![React Version](https://img.shields.io/badge/react-19-blue.svg)](https://react.dev/)
+[![Docker Image](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
 > A **reusable, configuration-driven Decision Intelligence Platform** that transforms customer interactions and enterprise knowledge into explainable, confidence-scored next best action recommendations — with a human-in-the-loop approval gate and continuous learning from feedback.
 
 ---
@@ -126,7 +132,7 @@ Each agent has a single, tightly-scoped responsibility. No agent calls another a
 - Flags missing information fields for downstream agents
 - Supports LLM synthesis via OpenRouter (optional, env-gated)
 
-**Input:** `{domain_pack_id, entity, interaction}`  
+**Input:** `{domain_pack_id, entity, interaction}`
 **Output:** `{playbooks, past_cases, evidence, missing_information, metadata}`
 
 ---
@@ -140,7 +146,7 @@ Each agent has a single, tightly-scoped responsibility. No agent calls another a
 - Produces a `reasoning_summary` and prioritized risk/opportunity lists
 - LLM-powered analysis (OpenRouter) with heuristic fallback
 
-**Input:** `{domain_pack_id, entity, interaction, retrieved_context}`  
+**Input:** `{domain_pack_id, entity, interaction, retrieved_context}`
 **Output:** `{risks, opportunities, missing_information, conflicts, reasoning_summary}`
 
 ---
@@ -154,7 +160,7 @@ Each agent has a single, tightly-scoped responsibility. No agent calls another a
 - Requires a `rejected_reason` for every non-selected candidate
 - LLM-powered generation (OpenRouter) with deterministic heuristic fallback
 
-**Input:** `{domain_pack_id, entity, interaction, retrieved_context, reasoning_output}`  
+**Input:** `{domain_pack_id, entity, interaction, retrieved_context, reasoning_output}`
 **Output:** `{candidate_actions, selected_action_id}`
 
 ---
@@ -171,7 +177,7 @@ Each agent has a single, tightly-scoped responsibility. No agent calls another a
 - Produces a step-by-step `reasoning_trace`
 - Assembles the complete `Recommendation` output payload
 
-**Input:** `{domain_pack_id, entity, interaction, retrieved_context, reasoning_output, recommendation_output}`  
+**Input:** `{domain_pack_id, entity, interaction, retrieved_context, reasoning_output, recommendation_output}`
 **Output:** `{selected_action, candidate_actions, evidence, computed_confidence, reasoning_trace}`
 
 ---
@@ -184,7 +190,7 @@ Each agent has a single, tightly-scoped responsibility. No agent calls another a
 - Runs the **reflective step** on demand: mines patterns from episodic memory and writes summarized heuristics back to ChromaDB semantic memory
 - Historical acceptance rates surface back to the Explanation Agent on future runs
 
-**Input:** Triggered by human approval events  
+**Input:** Triggered by human approval events
 **Output:** Feedback ID, reflection status, updated memory
 
 ---

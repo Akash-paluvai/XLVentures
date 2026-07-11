@@ -6,12 +6,10 @@ Supports LLM analysis via OpenRouter (using google/gemma-3-27b-it:free) and
 provides a robust Python rule-based heuristic fallback if LLM is unavailable.
 """
 
-import os
 import json
-import time
 import logging
-import requests
-from typing import Dict, Any, List, Optional
+import os
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -58,36 +56,66 @@ def _heuristic_reasoning_cs(
 
     # Risk detection
     if health is not None and health < 50:
-        risks.append(f"Low account health score ({health}) indicating high renewal/churn risk.")
+        risks.append(
+            f"Low account health score ({health}) indicating high renewal/churn risk."
+        )
     if is_declining:
-        risks.append(f"Declining usage trend ({entity.get('usage_trend')}) indicating potential reduction in adoption.")
-    if any(kw in interaction_lower for kw in ["champion", "left", "departed", "replace"]):
+        risks.append(
+            f"Declining usage trend ({entity.get('usage_trend')}) indicating potential reduction in adoption."
+        )
+    if any(
+        kw in interaction_lower for kw in ["champion", "left", "departed", "replace"]
+    ):
         risks.append("Primary stakeholder/champion change or departure detected.")
-    if any(kw in interaction_lower for kw in ["outage", "latency", "breach", "angry", "terminate"]):
-        risks.append("SLA breach or critical service outage causing severe customer dissatisfaction.")
+    if any(
+        kw in interaction_lower
+        for kw in ["outage", "latency", "breach", "angry", "terminate"]
+    ):
+        risks.append(
+            "SLA breach or critical service outage causing severe customer dissatisfaction."
+        )
     if "ticket" in interaction_lower and "open" in interaction_lower:
         risks.append("Unresolved open support ticket(s) impacting user experience.")
 
     # Opportunity detection
     if health is not None and health >= 80:
-        opportunities.append(f"Strong health score ({health}) indicates a stable account ready for expansion.")
+        opportunities.append(
+            f"Strong health score ({health}) indicates a stable account ready for expansion."
+        )
     if is_increasing:
-        opportunities.append(f"Increasing usage trend ({entity.get('usage_trend')}) suggests a positive adoption trajectory.")
-    if any(kw in interaction_lower for kw in ["upsell", "expand", "quota", "upgrade", "more seats"]):
-        opportunities.append("Customer expressing interest in plan expansion, additional seats, or product upgrades.")
+        opportunities.append(
+            f"Increasing usage trend ({entity.get('usage_trend')}) suggests a positive adoption trajectory."
+        )
+    if any(
+        kw in interaction_lower
+        for kw in ["upsell", "expand", "quota", "upgrade", "more seats"]
+    ):
+        opportunities.append(
+            "Customer expressing interest in plan expansion, additional seats, or product upgrades."
+        )
 
     # Conflict detection
-    if health is not None and health >= 80 and any(kw in interaction_lower for kw in ["angry", "terminate", "outage"]):
-        conflicts.append("High health score conflicts with critical outage or termination threat in interaction.")
+    if (
+        health is not None
+        and health >= 80
+        and any(kw in interaction_lower for kw in ["angry", "terminate", "outage"])
+    ):
+        conflicts.append(
+            "High health score conflicts with critical outage or termination threat in interaction."
+        )
     if health is not None and health < 50 and is_increasing:
-        conflicts.append("Low overall health score conflicts with increasing usage trend.")
+        conflicts.append(
+            "Low overall health score conflicts with increasing usage trend."
+        )
 
     # Deduplicate lists
     risks = list(dict.fromkeys(risks))
     opportunities = list(dict.fromkeys(opportunities))
     conflicts = list(dict.fromkeys(conflicts))
 
-    playbook_ids = [ev.get("source") for ev in evidence if ev.get("source_type") == "playbook"]
+    playbook_ids = [
+        ev.get("source") for ev in evidence if ev.get("source_type") == "playbook"
+    ]
     pb_str = ", ".join(playbook_ids) if playbook_ids else "no playbooks"
 
     if risks:
@@ -126,30 +154,50 @@ def _heuristic_reasoning_recruitment(
 
     # Risk detection
     if fit_score is not None and fit_score < 60:
-        risks.append(f"Low candidate fit score ({fit_score}) indicating potential skill mismatch.")
-    if any(kw in interaction_lower for kw in ["dropout", "no response", "quiet", "disengaged"]):
+        risks.append(
+            f"Low candidate fit score ({fit_score}) indicating potential skill mismatch."
+        )
+    if any(
+        kw in interaction_lower
+        for kw in ["dropout", "no response", "quiet", "disengaged"]
+    ):
         risks.append("Candidate displays disengagement or dropout indicators.")
     if any(kw in interaction_lower for kw in ["counter", "negotiate", "salary"]):
-        risks.append("Candidate negotiating compensation/counter-offer terms, introducing closure risk.")
+        risks.append(
+            "Candidate negotiating compensation/counter-offer terms, introducing closure risk."
+        )
 
     # Opportunity detection
     if fit_score is not None and fit_score >= 85:
-        opportunities.append(f"Exceptional candidate fit score ({fit_score}) supporting accelerated hiring.")
-    if any(kw in interaction_lower for kw in ["fast-track", "impressed", "highly interested"]):
-        opportunities.append("Strong positive interview feedback indicates fast-track eligibility.")
+        opportunities.append(
+            f"Exceptional candidate fit score ({fit_score}) supporting accelerated hiring."
+        )
+    if any(
+        kw in interaction_lower
+        for kw in ["fast-track", "impressed", "highly interested"]
+    ):
+        opportunities.append(
+            "Strong positive interview feedback indicates fast-track eligibility."
+        )
 
     # Conflict detection
     if fit_score is not None and fit_score >= 85 and "negative" in sentiment:
-        conflicts.append("High candidate fit score conflicts with negative interview sentiment.")
+        conflicts.append(
+            "High candidate fit score conflicts with negative interview sentiment."
+        )
     if "archive" in interaction_lower and "fast-track" in interaction_lower:
-        conflicts.append("Discrepancy between archiving intent and fast-track opportunity.")
+        conflicts.append(
+            "Discrepancy between archiving intent and fast-track opportunity."
+        )
 
     # Deduplicate
     risks = list(dict.fromkeys(risks))
     opportunities = list(dict.fromkeys(opportunities))
     conflicts = list(dict.fromkeys(conflicts))
 
-    playbook_ids = [ev.get("source") for ev in evidence if ev.get("source_type") == "playbook"]
+    playbook_ids = [
+        ev.get("source") for ev in evidence if ev.get("source_type") == "playbook"
+    ]
     pb_str = ", ".join(playbook_ids) if playbook_ids else "no playbooks"
 
     if risks:
@@ -226,7 +274,7 @@ class ReasoningAgent:
                     f"Analyze the entity and interaction below to identify risks, opportunities, conflicts, and missing information, and write a summary.\n\n"
                     f"Domain Pack: {domain_pack_id}\n"
                     f"Entity Details: {json.dumps(entity, indent=2)}\n"
-                    f"Interaction Notes: \"{safe_interaction}\"\n\n"
+                    f'Interaction Notes: "{safe_interaction}"\n\n'
                     f"Missing Information (Pre-detected): {json.dumps(missing_info)}\n\n"
                     f"Retrieved Playbook and Case Context:\n"
                 )
@@ -234,15 +282,15 @@ class ReasoningAgent:
                     prompt += f"Context Node {idx} ({ev.get('source_type')}, Source: {ev.get('source')}):\n{ev.get('content')}\n\n"
 
                 prompt += (
-                    f"Output your analysis in a valid JSON object matching the following structure exactly:\n"
-                    f"{{\n"
-                    f"  \"reasoning_summary\": \"A 2-3 sentence overview of the analysis and key findings.\",\n"
-                    f"  \"risks\": [\"risk statement 1\", ...],\n"
-                    f"  \"opportunities\": [\"opportunity statement 1\", ...],\n"
-                    f"  \"missing_information\": [\"missing info description 1\", ...],\n"
-                    f"  \"conflicts\": [\"conflict description 1\", ...]\n"
-                    f"}}\n"
-                    f"Output ONLY valid raw JSON. Do not write markdown blocks or backticks."
+                    "Output your analysis in a valid JSON object matching the following structure exactly:\n"
+                    "{\n"
+                    '  "reasoning_summary": "A 2-3 sentence overview of the analysis and key findings.",\n'
+                    '  "risks": ["risk statement 1", ...],\n'
+                    '  "opportunities": ["opportunity statement 1", ...],\n'
+                    '  "missing_information": ["missing info description 1", ...],\n'
+                    '  "conflicts": ["conflict description 1", ...]\n'
+                    "}\n"
+                    "Output ONLY valid raw JSON. Do not write markdown blocks or backticks."
                 )
 
                 resp_json = call_llm(
@@ -255,30 +303,46 @@ class ReasoningAgent:
                         "model": _OPENROUTER_MODEL,
                         "messages": [
                             {"role": "system", "content": system_instruction},
-                            {"role": "user", "content": prompt}
+                            {"role": "user", "content": prompt},
                         ],
                         "max_tokens": 500,
                         "temperature": 0.1,
                     },
                 )
-                result_json = _clean_json_response(resp_json["choices"][0]["message"]["content"])
-                
+                result_json = _clean_json_response(
+                    resp_json["choices"][0]["message"]["content"]
+                )
+
                 # Validate keys exist in output
-                required_keys = ["reasoning_summary", "risks", "opportunities", "missing_information", "conflicts"]
+                required_keys = [
+                    "reasoning_summary",
+                    "risks",
+                    "opportunities",
+                    "missing_information",
+                    "conflicts",
+                ]
                 if all(k in result_json for k in required_keys):
-                    logger.info("ReasoningAgent: successfully generated analysis using LLM.")
+                    logger.info(
+                        "ReasoningAgent: successfully generated analysis using LLM."
+                    )
                     return result_json
                 else:
-                    logger.warning("ReasoningAgent: LLM JSON was missing keys. Falling back to rules.")
+                    logger.warning(
+                        "ReasoningAgent: LLM JSON was missing keys. Falling back to rules."
+                    )
 
             except Exception as e:
-                logger.warning(f"ReasoningAgent: LLM execution failed (non-fatal): {e}. Falling back to rules.")
+                logger.warning(
+                    f"ReasoningAgent: LLM execution failed (non-fatal): {e}. Falling back to rules."
+                )
 
         # Fallback Heuristics
         if domain_pack_id == "customer_success":
             return _heuristic_reasoning_cs(entity, interaction, evidence, missing_info)
         elif domain_pack_id == "recruitment":
-            return _heuristic_reasoning_recruitment(entity, interaction, evidence, missing_info)
+            return _heuristic_reasoning_recruitment(
+                entity, interaction, evidence, missing_info
+            )
         else:
             # Domain-agnostic generic fallback
             return {

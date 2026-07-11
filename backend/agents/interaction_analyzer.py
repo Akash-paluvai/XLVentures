@@ -6,7 +6,7 @@ using keyword heuristics. Optional LLM enrichment when API key is available.
 """
 
 import logging
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -17,96 +17,218 @@ logger = logging.getLogger(__name__)
 
 CS_SIGNALS = {
     "champion_change": {
-        "keywords": ["champion left", "champion resigned", "champion departed", "sponsor left",
-                      "sponsor resigned", "primary contact left", "key contact departed",
-                      "champion change", "left the company", "departed"],
+        "keywords": [
+            "champion left",
+            "champion resigned",
+            "champion departed",
+            "sponsor left",
+            "sponsor resigned",
+            "primary contact left",
+            "key contact departed",
+            "champion change",
+            "left the company",
+            "departed",
+        ],
         "severity": "high",
         "decision_points": ["renewal", "retention"],
     },
     "renewal_risk": {
-        "keywords": ["renewal risk", "renewal due", "renewal approaching", "contract expiring",
-                      "renewal delayed", "may not renew", "renewal concern"],
+        "keywords": [
+            "renewal risk",
+            "renewal due",
+            "renewal approaching",
+            "contract expiring",
+            "renewal delayed",
+            "may not renew",
+            "renewal concern",
+        ],
         "severity": "high",
         "decision_points": ["renewal"],
     },
     "usage_decline": {
-        "keywords": ["usage dropped", "usage declined", "usage decreased", "adoption down",
-                      "usage falling", "lower adoption", "usage drop", "usage down"],
+        "keywords": [
+            "usage dropped",
+            "usage declined",
+            "usage decreased",
+            "adoption down",
+            "usage falling",
+            "lower adoption",
+            "usage drop",
+            "usage down",
+        ],
         "severity": "high",
         "decision_points": ["retention", "expansion"],
     },
     "budget_freeze": {
-        "keywords": ["budget freeze", "budget cut", "spending freeze", "cost cutting",
-                      "budget reduction", "no budget", "budget constrained"],
+        "keywords": [
+            "budget freeze",
+            "budget cut",
+            "spending freeze",
+            "cost cutting",
+            "budget reduction",
+            "no budget",
+            "budget constrained",
+        ],
         "severity": "high",
         "decision_points": ["expansion", "renewal"],
     },
     "escalation": {
-        "keywords": ["escalation", "escalated", "sla breach", "critical incident", "p1 incident",
-                      "p1 bug", "outage", "data loss", "angry", "furious", "terminate",
-                      "contract termination", "leadership call"],
+        "keywords": [
+            "escalation",
+            "escalated",
+            "sla breach",
+            "critical incident",
+            "p1 incident",
+            "p1 bug",
+            "outage",
+            "data loss",
+            "angry",
+            "furious",
+            "terminate",
+            "contract termination",
+            "leadership call",
+        ],
         "severity": "critical",
         "decision_points": ["retention", "renewal"],
     },
     "expansion_opportunity": {
-        "keywords": ["expansion", "upsell", "new team", "additional seats", "more users",
-                      "new division", "scale up", "grow footprint", "add-on", "upgrade"],
+        "keywords": [
+            "expansion",
+            "upsell",
+            "new team",
+            "additional seats",
+            "more users",
+            "new division",
+            "scale up",
+            "grow footprint",
+            "add-on",
+            "upgrade",
+        ],
         "severity": "low",
         "decision_points": ["expansion"],
     },
     "positive_sentiment": {
-        "keywords": ["happy", "satisfied", "love the product", "great experience",
-                      "excellent", "pleased", "impressed", "smooth", "running well"],
+        "keywords": [
+            "happy",
+            "satisfied",
+            "love the product",
+            "great experience",
+            "excellent",
+            "pleased",
+            "impressed",
+            "smooth",
+            "running well",
+        ],
         "severity": "low",
         "decision_points": ["expansion", "retention"],
     },
     "negative_sentiment": {
-        "keywords": ["unhappy", "frustrated", "disappointed", "dissatisfied",
-                      "poor experience", "not working", "broken", "terrible"],
+        "keywords": [
+            "unhappy",
+            "frustrated",
+            "disappointed",
+            "dissatisfied",
+            "poor experience",
+            "not working",
+            "broken",
+            "terrible",
+        ],
         "severity": "high",
         "decision_points": ["retention"],
     },
     "executive_engagement": {
-        "keywords": ["executive sponsor", "c-level", "cto", "cfo", "ceo", "vp",
-                      "executive requested", "leadership meeting", "board level"],
+        "keywords": [
+            "executive sponsor",
+            "c-level",
+            "cto",
+            "cfo",
+            "ceo",
+            "vp",
+            "executive requested",
+            "leadership meeting",
+            "board level",
+        ],
         "severity": "medium",
         "decision_points": ["renewal", "expansion"],
     },
     "competitive_threat": {
-        "keywords": ["competitor", "competitive", "alternative", "evaluating other",
-                      "looking at", "switch to", "replace with", "competitive threat"],
+        "keywords": [
+            "competitor",
+            "competitive",
+            "alternative",
+            "evaluating other",
+            "looking at",
+            "switch to",
+            "replace with",
+            "competitive threat",
+        ],
         "severity": "high",
         "decision_points": ["retention", "renewal"],
     },
     "pricing_objection": {
-        "keywords": ["pricing", "too expensive", "cost concern", "price reduction",
-                      "discount", "pricing objection", "pricing concession",
-                      "lower price", "cheaper"],
+        "keywords": [
+            "pricing",
+            "too expensive",
+            "cost concern",
+            "price reduction",
+            "discount",
+            "pricing objection",
+            "pricing concession",
+            "lower price",
+            "cheaper",
+        ],
         "severity": "medium",
         "decision_points": ["renewal", "expansion"],
     },
     "procurement_delay": {
-        "keywords": ["procurement", "procurement delay", "legal review", "contract review",
-                      "pending approval", "internal approval", "buying committee"],
+        "keywords": [
+            "procurement",
+            "procurement delay",
+            "legal review",
+            "contract review",
+            "pending approval",
+            "internal approval",
+            "buying committee",
+        ],
         "severity": "medium",
         "decision_points": ["renewal"],
     },
     "product_adoption_growth": {
-        "keywords": ["adoption increased", "feature adoption", "usage increased",
-                      "onboarded new team", "completed training", "usage up",
-                      "adoption growth", "usage grew"],
+        "keywords": [
+            "adoption increased",
+            "feature adoption",
+            "usage increased",
+            "onboarded new team",
+            "completed training",
+            "usage up",
+            "adoption growth",
+            "usage grew",
+        ],
         "severity": "low",
         "decision_points": ["expansion"],
     },
     "churn_signal": {
-        "keywords": ["churn", "cancel", "cancellation", "terminate account",
-                      "end contract", "not renewing", "will leave"],
+        "keywords": [
+            "churn",
+            "cancel",
+            "cancellation",
+            "terminate account",
+            "end contract",
+            "not renewing",
+            "will leave",
+        ],
         "severity": "critical",
         "decision_points": ["retention", "renewal"],
     },
     "feature_request": {
-        "keywords": ["feature request", "need feature", "missing feature",
-                      "want capability", "roadmap request", "enhancement"],
+        "keywords": [
+            "feature request",
+            "need feature",
+            "missing feature",
+            "want capability",
+            "roadmap request",
+            "enhancement",
+        ],
         "severity": "low",
         "decision_points": ["retention", "expansion"],
     },
@@ -114,56 +236,114 @@ CS_SIGNALS = {
 
 RECRUITMENT_SIGNALS = {
     "candidate_dropoff": {
-        "keywords": ["dropout", "dropped out", "no response", "ghosted", "disengaged",
-                      "withdrew", "not interested", "pulled out"],
+        "keywords": [
+            "dropout",
+            "dropped out",
+            "no response",
+            "ghosted",
+            "disengaged",
+            "withdrew",
+            "not interested",
+            "pulled out",
+        ],
         "severity": "high",
         "decision_points": ["pipeline"],
     },
     "competing_offer": {
-        "keywords": ["competing offer", "counter offer", "other offer", "another company",
-                      "received offer", "rival offer"],
+        "keywords": [
+            "competing offer",
+            "counter offer",
+            "other offer",
+            "another company",
+            "received offer",
+            "rival offer",
+        ],
         "severity": "high",
         "decision_points": ["offer", "pipeline"],
     },
     "salary_concern": {
-        "keywords": ["salary concern", "compensation", "pay range", "salary negotiation",
-                      "salary expectation", "higher salary", "salary too low"],
+        "keywords": [
+            "salary concern",
+            "compensation",
+            "pay range",
+            "salary negotiation",
+            "salary expectation",
+            "higher salary",
+            "salary too low",
+        ],
         "severity": "medium",
         "decision_points": ["offer"],
     },
     "strong_fit": {
-        "keywords": ["strong fit", "excellent candidate", "top candidate", "highly qualified",
-                      "perfect match", "great interview", "strong performance"],
+        "keywords": [
+            "strong fit",
+            "excellent candidate",
+            "top candidate",
+            "highly qualified",
+            "perfect match",
+            "great interview",
+            "strong performance",
+        ],
         "severity": "low",
         "decision_points": ["offer"],
     },
     "interview_delay": {
-        "keywords": ["interview delay", "rescheduled", "postponed", "scheduling conflict",
-                      "delayed interview", "interview pushed"],
+        "keywords": [
+            "interview delay",
+            "rescheduled",
+            "postponed",
+            "scheduling conflict",
+            "delayed interview",
+            "interview pushed",
+        ],
         "severity": "medium",
         "decision_points": ["pipeline"],
     },
     "positive_feedback": {
-        "keywords": ["positive feedback", "great feedback", "passed interview",
-                      "strong recommendation", "team liked"],
+        "keywords": [
+            "positive feedback",
+            "great feedback",
+            "passed interview",
+            "strong recommendation",
+            "team liked",
+        ],
         "severity": "low",
         "decision_points": ["offer", "pipeline"],
     },
     "negative_feedback": {
-        "keywords": ["negative feedback", "poor performance", "failed interview",
-                      "concerns raised", "not recommended", "weak performance"],
+        "keywords": [
+            "negative feedback",
+            "poor performance",
+            "failed interview",
+            "concerns raised",
+            "not recommended",
+            "weak performance",
+        ],
         "severity": "high",
         "decision_points": ["pipeline"],
     },
     "urgent_hiring_need": {
-        "keywords": ["urgent hire", "immediate need", "critical role", "backfill needed",
-                      "priority hire", "asap", "urgent requirement"],
+        "keywords": [
+            "urgent hire",
+            "immediate need",
+            "critical role",
+            "backfill needed",
+            "priority hire",
+            "asap",
+            "urgent requirement",
+        ],
         "severity": "high",
         "decision_points": ["pipeline", "offer"],
     },
     "offer_acceptance_signal": {
-        "keywords": ["ready to accept", "verbal acceptance", "will sign", "excited to join",
-                      "accepted offer", "confirmed start"],
+        "keywords": [
+            "ready to accept",
+            "verbal acceptance",
+            "will sign",
+            "excited to join",
+            "accepted offer",
+            "confirmed start",
+        ],
         "severity": "low",
         "decision_points": ["offer"],
     },
@@ -183,6 +363,7 @@ SEVERITY_WEIGHTS = {
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def analyze_interaction(
     content: str,
     domain_pack_id: str,
@@ -196,7 +377,9 @@ def analyze_interaction(
     """
     content_lower = content.lower()
 
-    signal_defs = CS_SIGNALS if domain_pack_id == "customer_success" else RECRUITMENT_SIGNALS
+    signal_defs = (
+        CS_SIGNALS if domain_pack_id == "customer_success" else RECRUITMENT_SIGNALS
+    )
 
     detected_signals: List[str] = []
     max_severity = "low"
@@ -208,7 +391,9 @@ def analyze_interaction(
             if keyword in content_lower:
                 detected_signals.append(signal_name)
                 # Track highest severity
-                if severity_order.get(signal_def["severity"], 0) > severity_order.get(max_severity, 0):
+                if severity_order.get(signal_def["severity"], 0) > severity_order.get(
+                    max_severity, 0
+                ):
                     max_severity = signal_def["severity"]
                 all_decision_points.update(signal_def["decision_points"])
                 break  # one match per signal is enough
@@ -221,7 +406,9 @@ def analyze_interaction(
     impact_score = min(impact_score, 100)
 
     # Generate brief recommendation summary
-    recommendation = _generate_recommendation(detected_signals, max_severity, domain_pack_id)
+    recommendation = _generate_recommendation(
+        detected_signals, max_severity, domain_pack_id
+    )
 
     logger.info(
         f"InteractionAnalyzer: Extracted {len(detected_signals)} signal(s) "

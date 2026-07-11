@@ -1,65 +1,72 @@
-import logging
 import json
+import logging
 import time
+import uuid
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Query, Request, Response
+from typing import Any, Dict, List, Optional
+
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
-from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
-import uuid
 
+from backend.core.logger import request_id_ctx_var, setup_logging
 from backend.core.settings import settings
-from backend.core.logger import setup_logging, request_id_ctx_var
 
 # Initialize root logging configuration early
 setup_logging()
 
-from backend.core.config_loader import load_domain_pack, load_accounts
-from backend.registry.agent_registry import bootstrap_agents, get_agent
-from backend.core.planner import graph, planner_traces
-from backend.memory.episodic import SessionLocal, RecommendationRecord, FeedbackRecord
-from backend.security.input_guard import validate_interaction_input, ValidationError
-from backend.memory.interactions import (
-    create_interaction, get_interactions, get_recent_interactions,
-    get_interaction_stats, create_evolution, get_evolutions, get_latest_evolution,
-)
 from backend.agents.interaction_analyzer import analyze_interaction
+from backend.core.config_loader import load_accounts, load_domain_pack
 from backend.core.impact_engine import assess_impact
-
+from backend.core.planner import graph, planner_traces
+from backend.memory.episodic import FeedbackRecord, RecommendationRecord, SessionLocal
+from backend.memory.interactions import (
+    create_evolution,
+    create_interaction,
+    get_interaction_stats,
+    get_interactions,
+    get_latest_evolution,
+    get_recent_interactions,
+)
+from backend.registry.agent_registry import bootstrap_agents, get_agent
+from backend.security.input_guard import ValidationError, validate_interaction_input
 
 logger = logging.getLogger("api")
+
 
 def ensure_directories():
     """Ensure that the data and vector store directories exist before startup."""
     from pathlib import Path
-    
+
     # Determine SQLite DB directory from DATABASE_URL
     if settings.DATABASE_URL.startswith("sqlite:///"):
         db_path_str = settings.DATABASE_URL.replace("sqlite:///", "")
         db_path = Path(db_path_str)
         db_path.parent.mkdir(parents=True, exist_ok=True)
         logger.info(f"SQLite directory checked/created at: {db_path.parent}")
-        
+
     # Determine ChromaDB directory (only if VECTOR_DB is chroma)
     if settings.VECTOR_DB == "chroma":
         chroma_path = Path(settings.CHROMA_PATH)
         chroma_path.mkdir(parents=True, exist_ok=True)
         logger.info(f"ChromaDB directory checked/created at: {chroma_path}")
-        
+
     # Determine Qdrant local directory (only if VECTOR_DB is qdrant and not using remote Qdrant)
     if settings.VECTOR_DB == "qdrant" and not settings.QDRANT_URL:
         qdrant_path = Path(settings.QDRANT_PATH)
         qdrant_path.mkdir(parents=True, exist_ok=True)
         logger.info(f"Qdrant local directory checked/created at: {qdrant_path}")
 
+
 def check_db_health() -> bool:
     """Test connection to the SQL database."""
     try:
         from sqlalchemy import text
+
         with SessionLocal() as session:
             session.execute(text("SELECT 1"))
         return True
@@ -67,14 +74,17 @@ def check_db_health() -> bool:
         logger.error(f"Database health check failed: {e}")
         return False
 
+
 def check_vector_store_health() -> bool:
     """Test connection to the active vector database."""
     try:
         from backend.memory import semantic
+
         return semantic.is_healthy()
     except Exception as e:
         logger.error(f"Vector store health check failed: {e}")
         return False
+
 
 def validate_storage_connections():
     """Verify core storage layers are reachable on startup. Fails fast if critical databases are down."""
@@ -84,7 +94,7 @@ def validate_storage_connections():
         logger.error("CRITICAL: Database connection check failed!")
         raise RuntimeError("Database connection check failed.")
     logger.info("Database connection validated successfully.")
-    
+
     # 2. Check Vector DB (critical)
     logger.info(f"Verifying vector store connection ({settings.VECTOR_DB})...")
     if not check_vector_store_health():
@@ -95,15 +105,20 @@ def validate_storage_connections():
     # 3. Check LLM Key (optional/warning only)
     logger.info("Verifying LLM service configuration...")
     if not settings.OPENROUTER_API_KEY:
-        logger.warning("WARNING: OPENROUTER_API_KEY is not configured. Heuristic fallbacks will be used.")
+        logger.warning(
+            "WARNING: OPENROUTER_API_KEY is not configured. Heuristic fallbacks will be used."
+        )
     else:
         logger.info("LLM service configured successfully.")
 
+
 def print_startup_banner():
     # Determine SQLite vs Postgres URL type
-    db_type = "PostgreSQL" if settings.DATABASE_URL.startswith("postgresql") else "SQLite"
+    db_type = (
+        "PostgreSQL" if settings.DATABASE_URL.startswith("postgresql") else "SQLite"
+    )
     vs_type = settings.VECTOR_DB.upper()
-    
+
     # Count playbooks
     playbook_count = 0
     data_dir = settings.BASE_DIR / "backend" / "data"
@@ -111,11 +126,12 @@ def print_startup_banner():
         playbook_dir = data_dir / d / "playbooks"
         if playbook_dir.exists():
             playbook_count += len(list(playbook_dir.glob("*.md")))
-            
+
     # Count agents
     from backend.registry.agent_registry import list_agents
+
     agents_count = len(list_agents())
-    
+
     banner = f"""
 ============================================================
   DECISION INTELLIGENCE PLATFORM STARTED SUCCESSFULLY
@@ -131,25 +147,28 @@ def print_startup_banner():
 """
     print(banner, flush=True)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """On startup, initialize directories, validate storage connections, validate configs, and bootstrap agents."""
     # 1. Run filesystem setup
     ensure_directories()
-    
+
     # 2. Validate storage connections
     validate_storage_connections()
-    
+
     # 3. Validate configurations & domain packs
     logger.info("Initializing and validating domain packs...")
     for pack_name in ["customer_success", "recruitment"]:
         try:
             pack = load_domain_pack(pack_name)
             logger.info(f"Validated domain pack: '{pack_name}'.")
-            
+
             # Validate accounts exist and are readable
             accounts = load_accounts(pack_name)
-            logger.info(f"Validated accounts data for: '{pack_name}' (Loaded {len(accounts)} records).")
+            logger.info(
+                f"Validated accounts data for: '{pack_name}' (Loaded {len(accounts)} records)."
+            )
         except Exception as e:
             logger.error(f"CRITICAL: Failed to validate '{pack_name}': {e}")
             raise RuntimeError(f"Domain pack '{pack_name}' invalid or missing: {e}")
@@ -164,11 +183,17 @@ async def lifespan(app: FastAPI):
             playbooks_found = True
             logger.info(f"Validated playbooks directory for domain: '{domain}'.")
         else:
-            logger.warning(f"No markdown playbooks found for domain: '{domain}' at {playbook_dir}")
-    
+            logger.warning(
+                f"No markdown playbooks found for domain: '{domain}' at {playbook_dir}"
+            )
+
     if not playbooks_found:
-        logger.error("CRITICAL: No playbooks found in backend/data! Seeding memory is required.")
-        raise RuntimeError("CRITICAL: No playbooks found in backend/data. Check data paths.")
+        logger.error(
+            "CRITICAL: No playbooks found in backend/data! Seeding memory is required."
+        )
+        raise RuntimeError(
+            "CRITICAL: No playbooks found in backend/data. Check data paths."
+        )
 
     # 5. Bootstrap agents in registry
     logger.info("Bootstrapping agents in registry...")
@@ -186,9 +211,9 @@ async def lifespan(app: FastAPI):
 
     # Print beautiful startup banner
     print_startup_banner()
-    
+
     yield
-    
+
     # Graceful Shutdown
     logger.info("============================================================")
     logger.info("  Shutting down Decision Intelligence Platform...")
@@ -197,10 +222,11 @@ async def lifespan(app: FastAPI):
     logger.info("  Goodbye!")
     logger.info("============================================================")
 
+
 app = FastAPI(
     title="Agentic Decision Intelligence Platform",
     description="""
-    Production-grade backend for SaaS account management, renewal risk intelligence, 
+    Production-grade backend for SaaS account management, renewal risk intelligence,
     and automated closed-loop learning.
     """,
     version="1.0.0",
@@ -211,8 +237,9 @@ app = FastAPI(
     license_info={
         "name": "MIT License",
     },
-    lifespan=lifespan
+    lifespan=lifespan,
 )
+
 
 # Custom class-based middleware for request tracking (Request ID & Response Time)
 class ProductionMiddleware(BaseHTTPMiddleware):
@@ -221,20 +248,20 @@ class ProductionMiddleware(BaseHTTPMiddleware):
         request_id = request.headers.get("X-Request-ID")
         if not request_id:
             request_id = str(uuid.uuid4())
-            
+
         # Set context var for logger to consume in request logs
         token = request_id_ctx_var.set(request_id)
-        
+
         start_time = time.perf_counter()
         response = None
         try:
             response = await call_next(request)
             process_time_ms = int((time.perf_counter() - start_time) * 1000)
-            
+
             # Inject headers
             response.headers["X-Response-Time"] = f"{process_time_ms}ms"
             response.headers["X-Request-ID"] = request_id
-            
+
             # Log the request details with response time
             logger.info(
                 f"{request.method} {request.url.path} - "
@@ -250,6 +277,7 @@ class ProductionMiddleware(BaseHTTPMiddleware):
             # Reset ContextVar
             request_id_ctx_var.reset(token)
 
+
 app.add_middleware(ProductionMiddleware)
 
 # CORS configuration from settings
@@ -262,6 +290,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Global Exception Handlers returning unified JSON format without leaking internal traces
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -271,20 +300,19 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={
             "error": "ValidationError",
             "message": "Invalid request payload parameters.",
-            "details": exc.errors()
-        }
+            "details": exc.errors(),
+        },
     )
+
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     logger.error(f"HTTP error occurred (Status {exc.status_code}): {exc.detail}")
     return JSONResponse(
         status_code=exc.status_code,
-        content={
-            "error": exc.__class__.__name__,
-            "message": exc.detail
-        }
+        content={"error": exc.__class__.__name__, "message": exc.detail},
     )
+
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
@@ -294,20 +322,18 @@ async def general_exception_handler(request: Request, exc: Exception):
     if settings.ENVIRONMENT == "development":
         message = f"Unhandled Exception: {str(exc)}"
     return JSONResponse(
-        status_code=500,
-        content={
-            "error": "InternalServerError",
-            "message": message
-        }
+        status_code=500, content={"error": "InternalServerError", "message": message}
     )
 
 
 # ── Request schemas ──────────────────────────────────────────────────────────
 
+
 class RecommendRequest(BaseModel):
     domain_pack_id: str
     entity_id: str
     interaction: Optional[str] = None
+
 
 class ApproveRequest(BaseModel):
     thread_id: str
@@ -315,8 +341,10 @@ class ApproveRequest(BaseModel):
     feedback_text: Optional[str] = None
     edited_action: Optional[Dict[str, Any]] = None
 
+
 class ReflectRequest(BaseModel):
     domain_pack_id: str
+
 
 class InteractionRequest(BaseModel):
     account_id: str
@@ -333,35 +361,37 @@ class InteractionRequest(BaseModel):
 
 # ── Health & Readiness ────────────────────────────────────────────────────────
 
+
 @app.get(f"{settings.API_V1_PREFIX}/health")
 def get_health():
     db_healthy = check_db_health()
     vs_healthy = check_vector_store_health()
-    
+
     status = "healthy" if (db_healthy and vs_healthy) else "unhealthy"
-    
+
     return {
         "status": status,
         "services": {
             "database": "connected" if db_healthy else "error",
             "vector_store": "connected" if vs_healthy else "error",
-            "llm": "configured" if settings.OPENROUTER_API_KEY else "warning"
+            "llm": "configured" if settings.OPENROUTER_API_KEY else "warning",
         },
         "build": {
             "version": settings.BUILD_VERSION,
             "environment": settings.ENVIRONMENT,
             "git_commit": settings.GIT_COMMIT,
-            "build_date": settings.BUILD_DATE
-        }
+            "build_date": settings.BUILD_DATE,
+        },
     }
+
 
 @app.get(f"{settings.API_V1_PREFIX}/ready")
 def get_readiness():
     db_healthy = check_db_health()
     vs_healthy = check_vector_store_health()
-    
+
     planner_loaded = graph is not None
-    
+
     domain_packs_count = 0
     try:
         for pack in ["customer_success", "recruitment"]:
@@ -369,17 +399,18 @@ def get_readiness():
             domain_packs_count += 1
     except Exception:
         pass
-        
+
     if db_healthy and vs_healthy and planner_loaded and domain_packs_count > 0:
         return {
             "status": "ready",
             "database": "connected",
             "vector_store": "connected",
             "planner": "loaded",
-            "domain_packs": domain_packs_count
+            "domain_packs": domain_packs_count,
         }
     else:
         from fastapi import status
+
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={
@@ -387,12 +418,13 @@ def get_readiness():
                 "database": "connected" if db_healthy else "error",
                 "vector_store": "connected" if vs_healthy else "error",
                 "planner": "loaded" if planner_loaded else "error",
-                "domain_packs": domain_packs_count
-            }
+                "domain_packs": domain_packs_count,
+            },
         )
 
 
 # ── Domain & Accounts ────────────────────────────────────────────────────────
+
 
 @app.get(f"{settings.API_V1_PREFIX}/domain")
 def get_domain(domain: str = Query("customer_success")):
@@ -416,11 +448,13 @@ def get_accounts(domain: str = Query("customer_success")):
 
 # ── Recommend (runs graph to interrupt) ──────────────────────────────────────
 
+
 @app.post(f"{settings.API_V1_PREFIX}/recommend")
 def post_recommend(req: RecommendRequest):
     try:
         # Reset request-scoped LLM calls counter
         from backend.core.llm_client import llm_call_counter
+
         llm_call_counter.set(0)
 
         # Validate inputs via input_guard
@@ -432,11 +466,15 @@ def post_recommend(req: RecommendRequest):
         domain_pack = load_domain_pack(req.domain_pack_id)
         entities = load_accounts(req.domain_pack_id)
 
-        id_key = "account_id" if req.domain_pack_id == "customer_success" else "candidate_id"
+        id_key = (
+            "account_id" if req.domain_pack_id == "customer_success" else "candidate_id"
+        )
         entity = next((e for e in entities if e.get(id_key) == req.entity_id), None)
 
         if not entity:
-            raise HTTPException(status_code=404, detail=f"Entity '{req.entity_id}' not found.")
+            raise HTTPException(
+                status_code=404, detail=f"Entity '{req.entity_id}' not found."
+            )
 
         interaction_text = (
             req.interaction
@@ -462,7 +500,9 @@ def post_recommend(req: RecommendRequest):
 
         config = {"configurable": {"thread_id": thread_id}}
 
-        logger.info(f"Running graph on thread '{thread_id}' for entity '{req.entity_id}'...")
+        logger.info(
+            f"Running graph on thread '{thread_id}' for entity '{req.entity_id}'..."
+        )
         t0 = time.time()
 
         for event in graph.stream(state, config):
@@ -566,6 +606,7 @@ def _build_recommendation_analysis(vals: dict) -> dict:
     account = vals.get("account", {})
     if account.get("renewal_date"):
         from datetime import datetime
+
         try:
             rd = datetime.strptime(account["renewal_date"], "%Y-%m-%d")
             days_until = (rd - datetime.now()).days
@@ -600,10 +641,12 @@ def _build_recommendation_analysis(vals: dict) -> dict:
     selected_id = rec_output.get("selected_action_id", "")
     for action in rec_output.get("candidate_actions", []):
         if action.get("id") != selected_id and action.get("rejected_reason"):
-            why_not_others.append({
-                "action": action.get("title", ""),
-                "reason": action["rejected_reason"],
-            })
+            why_not_others.append(
+                {
+                    "action": action.get("title", ""),
+                    "reason": action["rejected_reason"],
+                }
+            )
 
     return {
         "why_this": unique_why[:8],
@@ -619,6 +662,7 @@ def _build_recommendation_analysis(vals: dict) -> dict:
 
 # ── Approve (resumes graph) ─────────────────────────────────────────────────
 
+
 @app.post(f"{settings.API_V1_PREFIX}/approve")
 def post_approve(req: ApproveRequest):
     try:
@@ -626,10 +670,14 @@ def post_approve(req: ApproveRequest):
         if req.thread_id in planner_traces:
             trace = planner_traces[req.thread_id]
             if not trace.get("paused", True):
-                logger.info(f"Idempotency Gate: Thread '{req.thread_id}' already processed (outcome={trace.get('outcome')}). Returning cached response.")
+                logger.info(
+                    f"Idempotency Gate: Thread '{req.thread_id}' already processed (outcome={trace.get('outcome')}). Returning cached response."
+                )
                 return {
                     "status": "success",
-                    "metadata": {"outcome_feedback_id": trace.get("outcome_feedback_id")},
+                    "metadata": {
+                        "outcome_feedback_id": trace.get("outcome_feedback_id")
+                    },
                     "outcome": trace.get("outcome"),
                     "idempotent_cached": True,
                 }
@@ -638,7 +686,9 @@ def post_approve(req: ApproveRequest):
         current_state = graph.get_state(config)
 
         if not current_state.values:
-            raise HTTPException(status_code=404, detail=f"Thread '{req.thread_id}' not found.")
+            raise HTTPException(
+                status_code=404, detail=f"Thread '{req.thread_id}' not found."
+            )
 
         state_updates = {
             "human_feedback": {
@@ -653,7 +703,9 @@ def post_approve(req: ApproveRequest):
                 explanation_output["selected_action"] = req.edited_action
                 state_updates["explanation_output"] = explanation_output
 
-        logger.info(f"Resuming graph on thread '{req.thread_id}' with outcome '{req.outcome}'...")
+        logger.info(
+            f"Resuming graph on thread '{req.thread_id}' with outcome '{req.outcome}'..."
+        )
         graph.update_state(config, state_updates, as_node="human_approval_node")
 
         t0 = time.time()
@@ -670,7 +722,9 @@ def post_approve(req: ApproveRequest):
             trace["paused"] = False
             trace["outcome_feedback_id"] = fb_id
             trace["executed_path"].append("learning_node")
-            trace["timestamps"]["completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            trace["timestamps"]["completed_at"] = time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+            )
             trace["execution_time_ms"] += elapsed_ms
             trace["outcome"] = req.outcome
 
@@ -689,6 +743,7 @@ def post_approve(req: ApproveRequest):
 
 # ── Reflect (manual learning trigger) ────────────────────────────────────────
 
+
 @app.post(f"{settings.API_V1_PREFIX}/reflect")
 def post_reflect(req: ReflectRequest):
     try:
@@ -700,6 +755,7 @@ def post_reflect(req: ReflectRequest):
 
 
 # ── History (recommendations + feedback) ─────────────────────────────────────
+
 
 @app.get(f"{settings.API_V1_PREFIX}/history")
 def get_history(domain: str = Query("customer_success")):
@@ -726,7 +782,9 @@ def get_history(domain: str = Query("customer_success")):
                         "feedback_id": fb.feedback_id,
                         "outcome": fb.outcome,
                         "human_feedback": fb.human_feedback,
-                        "created_at": fb.created_at.isoformat() if fb.created_at else None,
+                        "created_at": (
+                            fb.created_at.isoformat() if fb.created_at else None
+                        ),
                     }
                     for fb in feedbacks
                 ]
@@ -737,14 +795,18 @@ def get_history(domain: str = Query("customer_success")):
                 except Exception:
                     rec_data = {}
 
-                results.append({
-                    "recommendation_id": rec.recommendation_id,
-                    "entity_id": rec.entity_id,
-                    "domain_pack_id": rec.domain_pack_id,
-                    "recommendation": rec_data,
-                    "feedback": fb_list,
-                    "created_at": rec.created_at.isoformat() if rec.created_at else None,
-                })
+                results.append(
+                    {
+                        "recommendation_id": rec.recommendation_id,
+                        "entity_id": rec.entity_id,
+                        "domain_pack_id": rec.domain_pack_id,
+                        "recommendation": rec_data,
+                        "feedback": fb_list,
+                        "created_at": (
+                            rec.created_at.isoformat() if rec.created_at else None
+                        ),
+                    }
+                )
 
         return results
 
@@ -754,6 +816,7 @@ def get_history(domain: str = Query("customer_success")):
 
 
 # ── Previous recommendation (for "What Changed" comparison) ─────────────────
+
 
 @app.get(f"{settings.API_V1_PREFIX}/previous-recommendation")
 def get_previous_recommendation(
@@ -802,9 +865,13 @@ def get_previous_recommendation(
                     "entity_id": prev.entity_id,
                     "action_title": prev_action.get("title", "N/A"),
                     "action_description": prev_action.get("description", ""),
-                    "confidence": prev_data.get("computed_confidence", {}).get("score", 0),
+                    "confidence": prev_data.get("computed_confidence", {}).get(
+                        "score", 0
+                    ),
                     "outcome": fb.outcome if fb else "unknown",
-                    "created_at": prev.created_at.isoformat() if prev.created_at else None,
+                    "created_at": (
+                        prev.created_at.isoformat() if prev.created_at else None
+                    ),
                 },
             }
 
@@ -815,27 +882,31 @@ def get_previous_recommendation(
 
 # ── Heuristics (learned from reflection) ─────────────────────────────────────
 
+
 @app.get(f"{settings.API_V1_PREFIX}/heuristics")
 def get_heuristics(domain: str = Query("customer_success")):
     """Returns learned heuristics from ChromaDB for a domain."""
     try:
         from backend.memory.semantic import get_document_by_id
+
         doc = get_document_by_id(domain, "learned_heuristics")
         if not doc:
             return []
-        return [{
-            "id": doc["id"],
-            "content": doc["content"],
-            "metadata": doc["metadata"],
-        }]
+        return [
+            {
+                "id": doc["id"],
+                "content": doc["content"],
+                "metadata": doc["metadata"],
+            }
+        ]
 
     except Exception as e:
         logger.error(f"Heuristics error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
 # ── Trace (planner execution trace) ──────────────────────────────────────────
+
 
 @app.get(f"{settings.API_V1_PREFIX}/trace")
 def get_trace(thread_id: str = Query(None)):
@@ -843,22 +914,33 @@ def get_trace(thread_id: str = Query(None)):
     if thread_id:
         trace = planner_traces.get(thread_id)
         if not trace:
-            raise HTTPException(status_code=404, detail=f"Trace for thread '{thread_id}' not found.")
+            raise HTTPException(
+                status_code=404, detail=f"Trace for thread '{thread_id}' not found."
+            )
         return trace
 
     # Return all traces (most recent first)
-    traces = sorted(planner_traces.values(), key=lambda t: t.get("timestamps", {}).get("started_at", ""), reverse=True)
+    traces = sorted(
+        planner_traces.values(),
+        key=lambda t: t.get("timestamps", {}).get("started_at", ""),
+        reverse=True,
+    )
     return traces
 
 
 @app.get(f"{settings.API_V1_PREFIX}/traces")
 def get_all_traces():
     """Returns all planner execution traces."""
-    traces = sorted(planner_traces.values(), key=lambda t: t.get("timestamps", {}).get("started_at", ""), reverse=True)
+    traces = sorted(
+        planner_traces.values(),
+        key=lambda t: t.get("timestamps", {}).get("started_at", ""),
+        reverse=True,
+    )
     return traces
 
 
 # ── Configuration Hub & Dynamics ─────────────────────────────────────────────
+
 
 def _calculate_acceptance_rate(domain: str) -> float:
     try:
@@ -881,7 +963,7 @@ def get_domain_config(domain: str = Query("customer_success")):
     """Returns all domain pack configs, active memory namespaces, validations and dynamic metrics."""
     try:
         domain_pack = load_domain_pack(domain)
-        
+
         # Calculate dynamic metrics
         metrics = {}
         if domain == "customer_success":
@@ -891,6 +973,7 @@ def get_domain_config(domain: str = Query("customer_success")):
                 accounts = load_accounts("customer_success")
                 diffs = []
                 from datetime import datetime
+
                 for acc in accounts:
                     rdate = datetime.strptime(acc["renewal_date"], "%Y-%m-%d")
                     udate = datetime.strptime(acc["updated_at"][:10], "%Y-%m-%d")
@@ -899,7 +982,7 @@ def get_domain_config(domain: str = Query("customer_success")):
                     lead_time = round(sum(diffs) / len(diffs))
             except Exception:
                 pass
-                
+
             # NRR calculation
             nrr_impact = 2.4
             try:
@@ -909,8 +992,15 @@ def get_domain_config(domain: str = Query("customer_success")):
                     with SessionLocal() as session:
                         rows = (
                             session.query(FeedbackRecord, RecommendationRecord)
-                            .join(RecommendationRecord, RecommendationRecord.recommendation_id == FeedbackRecord.recommendation_id)
-                            .filter(RecommendationRecord.domain_pack_id == "customer_success")
+                            .join(
+                                RecommendationRecord,
+                                RecommendationRecord.recommendation_id
+                                == FeedbackRecord.recommendation_id,
+                            )
+                            .filter(
+                                RecommendationRecord.domain_pack_id
+                                == "customer_success"
+                            )
                             .filter(FeedbackRecord.outcome == "approved")
                             .all()
                         )
@@ -918,7 +1008,14 @@ def get_domain_config(domain: str = Query("customer_success")):
                         for fb, rec in rows:
                             rec_data = json.loads(rec.recommendation_json)
                             entity_id = rec.entity_id
-                            acc = next((a for a in accounts if a.get("account_id") == entity_id), None)
+                            acc = next(
+                                (
+                                    a
+                                    for a in accounts
+                                    if a.get("account_id") == entity_id
+                                ),
+                                None,
+                            )
                             if acc:
                                 saved_acv += acc.get("annual_contract_value", 0) * 0.15
                         if rows:
@@ -929,7 +1026,7 @@ def get_domain_config(domain: str = Query("customer_success")):
             metrics = {
                 "acceptance_rate": _calculate_acceptance_rate("customer_success"),
                 "risk_catch_lead_time_days": lead_time,
-                "simulated_nrr_impact_pct": nrr_impact
+                "simulated_nrr_impact_pct": nrr_impact,
             }
         elif domain == "recruitment":
             t2h = 21
@@ -937,6 +1034,7 @@ def get_domain_config(domain: str = Query("customer_success")):
                 candidates = load_accounts("recruitment")
                 diffs = []
                 from datetime import datetime
+
                 for cand in candidates:
                     ddate = datetime.strptime(cand["decision_deadline"], "%Y-%m-%d")
                     udate = datetime.strptime(cand["updated_at"][:10], "%Y-%m-%d")
@@ -948,31 +1046,26 @@ def get_domain_config(domain: str = Query("customer_success")):
 
             metrics = {
                 "acceptance_rate": _calculate_acceptance_rate("recruitment"),
-                "time_to_hire_days": t2h
+                "time_to_hire_days": t2h,
             }
 
         return {
             "domain_pack": domain_pack,
             "metrics": metrics,
-            "memory": {
-                "active_collection": f"domain_{domain}"
-            },
+            "memory": {"active_collection": f"domain_{domain}"},
             "validation": {
                 "domain_switched": True,
                 "memory_loaded": True,
-                "prompt_overrides_loaded": True
+                "prompt_overrides_loaded": True,
             },
-            "supported_domains": [
-                "customer_success",
-                "recruitment"
-            ],
+            "supported_domains": ["customer_success", "recruitment"],
             "platform_capabilities": [
                 "dynamic_orchestration",
                 "human_in_the_loop",
                 "episodic_memory",
                 "semantic_memory",
-                "cross_domain_configuration"
-            ]
+                "cross_domain_configuration",
+            ],
         }
     except Exception as e:
         logger.error(f"Domain config error: {e}")
@@ -980,6 +1073,7 @@ def get_domain_config(domain: str = Query("customer_success")):
 
 
 # ── Interaction Intelligence Endpoints ───────────────────────────────────────
+
 
 @app.post(f"{settings.API_V1_PREFIX}/interactions")
 def post_interaction(req: InteractionRequest):
@@ -989,10 +1083,14 @@ def post_interaction(req: InteractionRequest):
 
         # 1. Validate account exists
         entities = load_accounts(req.domain_pack_id)
-        id_key = "account_id" if req.domain_pack_id == "customer_success" else "candidate_id"
+        id_key = (
+            "account_id" if req.domain_pack_id == "customer_success" else "candidate_id"
+        )
         entity = next((e for e in entities if e.get(id_key) == req.account_id), None)
         if not entity:
-            raise HTTPException(status_code=404, detail=f"Entity '{req.account_id}' not found.")
+            raise HTTPException(
+                status_code=404, detail=f"Entity '{req.account_id}' not found."
+            )
 
         # 2. Analyze interaction — extract signals
         analysis = analyze_interaction(req.content, req.domain_pack_id, entity)
@@ -1020,8 +1118,14 @@ def post_interaction(req: InteractionRequest):
             if prev_recs:
                 try:
                     prev_rec_json = prev_recs[0].recommendation_json
-                    prev_rec_data = json.loads(str(prev_rec_json)) if prev_rec_json is not None else {}
-                    prev_action_title = prev_rec_data.get("selected_action", {}).get("title", "N/A")
+                    prev_rec_data = (
+                        json.loads(str(prev_rec_json))
+                        if prev_rec_json is not None
+                        else {}
+                    )
+                    prev_action_title = prev_rec_data.get("selected_action", {}).get(
+                        "title", "N/A"
+                    )
                 except Exception:
                     prev_rec_data = {}
 
@@ -1034,6 +1138,7 @@ def post_interaction(req: InteractionRequest):
 
         # 5. Re-run planner with interaction text injected
         from backend.core.llm_client import llm_call_counter
+
         llm_call_counter.set(0)
 
         domain_pack = load_domain_pack(req.domain_pack_id)
@@ -1099,11 +1204,16 @@ def post_interaction(req: InteractionRequest):
         for sig in signals:
             change_reasons.append(sig.replace("_", " ").title())
         if planner_before != planner_after:
-            change_reasons.append(f"Planner reclassified: {planner_before} -> {planner_after}")
+            change_reasons.append(
+                f"Planner reclassified: {planner_before} -> {planner_after}"
+            )
 
         # 7. Store interaction with full metadata
         prev_rec_summary = {"title": prev_action_title} if prev_action_title else None
-        new_rec_summary = {"title": new_action_title, "confidence": new_rec.get("computed_confidence", {}).get("score", 0)}
+        new_rec_summary = {
+            "title": new_action_title,
+            "confidence": new_rec.get("computed_confidence", {}).get("score", 0),
+        }
 
         interaction_record = create_interaction(
             entity_id=req.account_id,
@@ -1164,7 +1274,9 @@ def post_interaction(req: InteractionRequest):
         raise
     except Exception as e:
         logger.error(f"Interaction ingestion error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Interaction processing failure: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Interaction processing failure: {e}"
+        )
 
 
 @app.get(f"{settings.API_V1_PREFIX}/interactions")
@@ -1201,7 +1313,12 @@ def get_recommendation_diff(
     try:
         evolution = get_latest_evolution(entity_id, domain)
         if not evolution:
-            return {"has_diff": False, "previous": None, "current": None, "change_reasons": []}
+            return {
+                "has_diff": False,
+                "previous": None,
+                "current": None,
+                "change_reasons": [],
+            }
 
         return {
             "has_diff": True,
@@ -1227,5 +1344,3 @@ def get_recent_interactions_api(
     except Exception as e:
         logger.error(f"Recent interactions error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-

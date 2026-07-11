@@ -8,23 +8,25 @@ Uses the same SQLAlchemy engine/Base from episodic.py.
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
-from sqlalchemy import Column, String, Text, DateTime, Float, Integer, text
-from sqlalchemy.orm import Session
+from sqlalchemy import Column, DateTime, Float, String, Text
 
-from backend.memory.episodic import Base, engine, SessionLocal
-
+from backend.memory.episodic import Base, SessionLocal, engine
 
 # ---------------------------------------------------------------------------
 # ORM Models
 # ---------------------------------------------------------------------------
 
+
 class InteractionRecord(Base):
     """Stores a customer/candidate interaction event."""
+
     __tablename__ = "interactions"
 
-    interaction_id = Column(String, primary_key=True, default=lambda: f"int_{uuid.uuid4().hex[:12]}")
+    interaction_id = Column(
+        String, primary_key=True, default=lambda: f"int_{uuid.uuid4().hex[:12]}"
+    )
     entity_id = Column(String, nullable=False, index=True)
     domain_pack_id = Column(String, nullable=False, index=True)
     interaction_type = Column(String, nullable=False)
@@ -43,9 +45,12 @@ class InteractionRecord(Base):
 
 class RecommendationEvolution(Base):
     """Tracks how recommendations evolve over time for an entity."""
+
     __tablename__ = "recommendation_evolution"
 
-    evolution_id = Column(String, primary_key=True, default=lambda: f"evo_{uuid.uuid4().hex[:12]}")
+    evolution_id = Column(
+        String, primary_key=True, default=lambda: f"evo_{uuid.uuid4().hex[:12]}"
+    )
     entity_id = Column(String, nullable=False, index=True)
     domain_pack_id = Column(String, nullable=False, index=True)
     interaction_id = Column(String, nullable=True)
@@ -58,50 +63,52 @@ class RecommendationEvolution(Base):
 # Create tables (idempotent)
 Base.metadata.create_all(engine)
 
+
 def seed_database_interactions():
     """Seed the interactions table from interactions.json files if empty."""
-    from pathlib import Path
     import json
-    
+    from pathlib import Path
+
     with SessionLocal() as session:
         # Check if table is empty
         if session.query(InteractionRecord).count() > 0:
             return
-            
+
         logger = logging.getLogger(__name__)
         logger.info("Seeding database interactions...")
-        
+
         project_root = Path(__file__).resolve().parent.parent.parent
         domains = ["customer_success", "recruitment"]
-        
+
         for domain in domains:
             json_path = project_root / "backend" / "data" / domain / "interactions.json"
             if not json_path.exists():
                 continue
-                
+
             try:
                 with open(json_path, "r") as f:
                     items = json.load(f)
-                    
+
                 for item in items:
                     # Run keyword analysis for signals/impact
                     from backend.agents.interaction_analyzer import analyze_interaction
                     from backend.core.impact_engine import assess_impact
-                    
+
                     content = item.get("content", "")
                     analysis = analyze_interaction(content, domain)
                     signals = analysis["signals"]
                     impact = assess_impact(signals)
-                    
+
                     # Convert timestamp string to datetime
                     ts_str = item.get("timestamp")
                     try:
                         ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
                     except Exception:
                         ts = datetime.now(timezone.utc)
-                        
+
                     record = InteractionRecord(
-                        interaction_id=item.get("interaction_id") or f"int_{uuid.uuid4().hex[:12]}",
+                        interaction_id=item.get("interaction_id")
+                        or f"int_{uuid.uuid4().hex[:12]}",
                         entity_id=item.get("account_id"),
                         domain_pack_id=domain,
                         interaction_type=item.get("interaction_type", "meeting_note"),
@@ -112,7 +119,9 @@ def seed_database_interactions():
                         signals=json.dumps(signals),
                         impact_score=float(impact["impact_score"]),
                         planner_classification_before="unknown",
-                        planner_classification_after="standard" if impact["impact_score"] < 40 else "escalation",
+                        planner_classification_after=(
+                            "standard" if impact["impact_score"] < 40 else "escalation"
+                        ),
                         recommendation_before=None,
                         recommendation_after=None,
                         created_at=ts,
@@ -121,16 +130,22 @@ def seed_database_interactions():
                 session.commit()
                 logger.info(f"Seeded {len(items)} interactions for domain '{domain}'.")
             except Exception as e:
-                logger.error(f"Error seeding interactions for domain '{domain}': {e}", exc_info=True)
+                logger.error(
+                    f"Error seeding interactions for domain '{domain}': {e}",
+                    exc_info=True,
+                )
+
 
 # Run seeding
 import logging
+
 seed_database_interactions()
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def create_interaction(
     entity_id: str,
@@ -185,9 +200,19 @@ def create_interaction(
             "impact_score": record.impact_score,
             "planner_classification_before": record.planner_classification_before,
             "planner_classification_after": record.planner_classification_after,
-            "recommendation_before": json.loads(record.recommendation_before) if record.recommendation_before else None,
-            "recommendation_after": json.loads(record.recommendation_after) if record.recommendation_after else None,
-            "created_at": record.created_at.isoformat() if record.created_at else now.isoformat(),
+            "recommendation_before": (
+                json.loads(record.recommendation_before)
+                if record.recommendation_before
+                else None
+            ),
+            "recommendation_after": (
+                json.loads(record.recommendation_after)
+                if record.recommendation_after
+                else None
+            ),
+            "created_at": (
+                record.created_at.isoformat() if record.created_at else now.isoformat()
+            ),
         }
     return result
 
@@ -205,7 +230,9 @@ def get_interactions(entity_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         return [_row_to_dict(r) for r in rows]
 
 
-def get_recent_interactions(domain_pack_id: str, limit: int = 20) -> List[Dict[str, Any]]:
+def get_recent_interactions(
+    domain_pack_id: str, limit: int = 20
+) -> List[Dict[str, Any]]:
     """Get recent interactions across all entities for a domain."""
     with SessionLocal() as session:
         rows = (
@@ -301,20 +328,32 @@ def get_evolutions(entity_id: str, limit: int = 20) -> List[Dict[str, Any]]:
         )
         results = []
         for r in rows:
-            results.append({
-                "evolution_id": r.evolution_id,
-                "entity_id": r.entity_id,
-                "domain_pack_id": r.domain_pack_id,
-                "interaction_id": r.interaction_id,
-                "previous_recommendation": json.loads(r.previous_recommendation) if r.previous_recommendation else None,
-                "new_recommendation": json.loads(r.new_recommendation) if r.new_recommendation else None,
-                "change_reasons": json.loads(r.change_reasons or "[]"),
-                "created_at": r.created_at.isoformat() if r.created_at else None,
-            })
+            results.append(
+                {
+                    "evolution_id": r.evolution_id,
+                    "entity_id": r.entity_id,
+                    "domain_pack_id": r.domain_pack_id,
+                    "interaction_id": r.interaction_id,
+                    "previous_recommendation": (
+                        json.loads(r.previous_recommendation)
+                        if r.previous_recommendation
+                        else None
+                    ),
+                    "new_recommendation": (
+                        json.loads(r.new_recommendation)
+                        if r.new_recommendation
+                        else None
+                    ),
+                    "change_reasons": json.loads(r.change_reasons or "[]"),
+                    "created_at": r.created_at.isoformat() if r.created_at else None,
+                }
+            )
         return results
 
 
-def get_latest_evolution(entity_id: str, domain_pack_id: str) -> Optional[Dict[str, Any]]:
+def get_latest_evolution(
+    entity_id: str, domain_pack_id: str
+) -> Optional[Dict[str, Any]]:
     """Get the most recent evolution for an entity."""
     evolutions = get_evolutions(entity_id, limit=1)
     return evolutions[0] if evolutions else None
@@ -323,6 +362,7 @@ def get_latest_evolution(entity_id: str, domain_pack_id: str) -> Optional[Dict[s
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _record_to_dict(r: InteractionRecord, created_at=None) -> Dict[str, Any]:
     """Convert an InteractionRecord ORM object to a plain dict (must be inside session)."""
@@ -339,10 +379,19 @@ def _record_to_dict(r: InteractionRecord, created_at=None) -> Dict[str, Any]:
         "impact_score": r.impact_score,
         "planner_classification_before": r.planner_classification_before,
         "planner_classification_after": r.planner_classification_after,
-        "recommendation_before": json.loads(r.recommendation_before) if r.recommendation_before else None,
-        "recommendation_after": json.loads(r.recommendation_after) if r.recommendation_after else None,
-        "created_at": (created_at or r.created_at).isoformat() if (created_at or r.created_at) else None,
+        "recommendation_before": (
+            json.loads(r.recommendation_before) if r.recommendation_before else None
+        ),
+        "recommendation_after": (
+            json.loads(r.recommendation_after) if r.recommendation_after else None
+        ),
+        "created_at": (
+            (created_at or r.created_at).isoformat()
+            if (created_at or r.created_at)
+            else None
+        ),
     }
+
 
 # Alias used inside active session context
 _row_to_dict = _record_to_dict

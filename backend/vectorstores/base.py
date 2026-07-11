@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
 
 class BaseVectorStore(ABC):
     @abstractmethod
@@ -11,7 +12,9 @@ class BaseVectorStore(ABC):
         pass
 
     @abstractmethod
-    def query(self, domain_pack_id: str, query_text: str, k: int = 3) -> List[Dict[str, Any]]:
+    def query(
+        self, domain_pack_id: str, query_text: str, k: int = 3
+    ) -> List[Dict[str, Any]]:
         """
         Query the domain's collection for the k most relevant documents.
         Returns a list of dicts with keys: id, content, metadata, distance.
@@ -35,7 +38,9 @@ class BaseVectorStore(ABC):
         pass
 
     @abstractmethod
-    def get_document_by_id(self, domain_pack_id: str, doc_id: str) -> Optional[Dict[str, Any]]:
+    def get_document_by_id(
+        self, domain_pack_id: str, doc_id: str
+    ) -> Optional[Dict[str, Any]]:
         """
         Retrieve a specific document by its ID.
         Returns None if not found.

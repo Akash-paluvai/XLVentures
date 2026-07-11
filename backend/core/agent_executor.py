@@ -3,9 +3,10 @@ Agent Executor — safety wrapper to catch agent failures, log traces, and recov
 """
 
 import logging
-from typing import Callable, Any, Dict
+from typing import Any, Callable, Dict
 
 logger = logging.getLogger(__name__)
+
 
 def execute_agent(agent_fn: Callable[..., Any], *args, **kwargs) -> Dict[str, Any]:
     """
@@ -22,7 +23,10 @@ def execute_agent(agent_fn: Callable[..., Any], *args, **kwargs) -> Dict[str, An
             "fallback_used": False,
         }
     except Exception as e:
-        logger.error(f"AgentExecutor: Exception raised during agent node execution: {e}", exc_info=True)
+        logger.error(
+            f"AgentExecutor: Exception raised during agent node execution: {e}",
+            exc_info=True,
+        )
         return {
             "success": False,
             "result": {},

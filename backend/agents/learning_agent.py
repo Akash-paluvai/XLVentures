@@ -6,9 +6,15 @@ semantic memory (ChromaDB) for continuous learning.
 
 import json
 import logging
-from typing import Dict, Any, List
+from typing import Any, Dict
 
-from backend.memory.episodic import write_recommendation, write_feedback, SessionLocal, RecommendationRecord, FeedbackRecord
+from backend.memory.episodic import (
+    FeedbackRecord,
+    RecommendationRecord,
+    SessionLocal,
+    write_feedback,
+    write_recommendation,
+)
 from backend.memory.semantic import add_documents
 
 logger = logging.getLogger(__name__)
@@ -69,7 +75,10 @@ class LearningAgent:
         )
 
         from datetime import datetime, timezone
-        approved_at = datetime.now(timezone.utc) if outcome in ["approved", "edited"] else None
+
+        approved_at = (
+            datetime.now(timezone.utc) if outcome in ["approved", "edited"] else None
+        )
 
         # Step 2: Write feedback outcome to database
         fb_id = write_feedback(
@@ -81,7 +90,9 @@ class LearningAgent:
             approved_at=approved_at,
         )
 
-        logger.info(f"LearningAgent: Saved outcome to episodic memory (rec_id={rec_id}, fb_id={fb_id}).")
+        logger.info(
+            f"LearningAgent: Saved outcome to episodic memory (rec_id={rec_id}, fb_id={fb_id})."
+        )
         return fb_id
 
     def run_reflection(self, domain_pack_id: str) -> Dict[str, Any]:
@@ -89,14 +100,20 @@ class LearningAgent:
         Mine episodic memory SQLite for outcomes, identify patterns, and write
         summarized learned heuristics back to ChromaDB semantic memory.
         """
-        logger.info(f"LearningAgent: Running reflection job for domain '{domain_pack_id}'.")
+        logger.info(
+            f"LearningAgent: Running reflection job for domain '{domain_pack_id}'."
+        )
 
         # Step 1: Query all feedback and recommendations for the domain
         try:
             with SessionLocal() as session:
                 rows = (
                     session.query(FeedbackRecord, RecommendationRecord)
-                    .join(RecommendationRecord, RecommendationRecord.recommendation_id == FeedbackRecord.recommendation_id)
+                    .join(
+                        RecommendationRecord,
+                        RecommendationRecord.recommendation_id
+                        == FeedbackRecord.recommendation_id,
+                    )
                     .filter(RecommendationRecord.domain_pack_id == domain_pack_id)
                     .all()
                 )
@@ -129,7 +146,12 @@ class LearningAgent:
                 title = selected.get("title", "Unknown Action")
 
                 if title not in stats:
-                    stats[title] = {"approved": 0, "rejected": 0, "edited": 0, "needs_info": 0}
+                    stats[title] = {
+                        "approved": 0,
+                        "rejected": 0,
+                        "edited": 0,
+                        "needs_info": 0,
+                    }
 
                 outcome = fb.outcome  # e.g., 'approved', 'edited'
                 if outcome in stats[title]:
@@ -151,7 +173,7 @@ class LearningAgent:
                 markdown += f"### Action: {title}\n"
                 markdown += f"- Approved Count: {outcomes['approved']}\n"
                 markdown += f"- Edited Count: {outcomes['edited']}\n"
-                markdown += f"- **Guidance**: Strong human acceptance. This action is highly favored and should be prioritized when context aligns.\n"
+                markdown += "- **Guidance**: Strong human acceptance. This action is highly favored and should be prioritized when context aligns.\n"
                 markdown += "\n"
         else:
             markdown += "No human feedback outcomes registered yet. Default playbook guidelines apply.\n"
@@ -170,9 +192,13 @@ class LearningAgent:
                 }
             ]
             add_documents(domain_pack_id, docs)
-            logger.info("LearningAgent: Successfully updated 'learned_heuristics' in semantic memory.")
+            logger.info(
+                "LearningAgent: Successfully updated 'learned_heuristics' in semantic memory."
+            )
         except Exception as e:
-            logger.error(f"LearningAgent: Failed to write learned heuristics to ChromaDB: {e}")
+            logger.error(
+                f"LearningAgent: Failed to write learned heuristics to ChromaDB: {e}"
+            )
             return {"status": "error", "message": str(e)}
 
         return {

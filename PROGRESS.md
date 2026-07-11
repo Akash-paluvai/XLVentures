@@ -15,7 +15,7 @@ Last updated: **2026-06-27**
 #### Core Data Contracts (`backend/core/schemas.py`)
 All Pydantic v2 models from the architecture spec:
 - `DomainPack`, `DecisionPoint`, `AgentSpec` — configuration contracts
-- `Recommendation`, `CandidateAction`, `ComputedConfidence` — output contracts  
+- `Recommendation`, `CandidateAction`, `ComputedConfidence` — output contracts
 - `EvidenceNode`, `MemoryWrite` — memory contracts
 - All include `metadata: dict = {}` for future extensibility
 
@@ -89,7 +89,7 @@ All Pydantic v2 models from the architecture spec:
 - Guards against empty metadata dicts (ChromaDB rejects them)
 
 #### Memory Manager (`backend/memory/manager.py`)
-- `MemoryManager` class with `retrieve_context(domain_pack_id, query)` 
+- `MemoryManager` class with `retrieve_context(domain_pack_id, query)`
 - Returns: `{ playbooks: [...], past_cases: [...], metadata: { playbook_count, past_case_count, latency_ms } }`
 - Global `memory_manager` singleton for import by agents and API routes
 
@@ -341,4 +341,3 @@ First real agent in the platform. Class-based with `.run(input_data)` method.
 - **E2E Playthrough**: Verified domain switches (Customer Success ➔ Recruitment), full pipeline execution, feedback/reject requirement validation, and custom modal edits.
 - **Memory/Trace Updates**: Confirmed that decisions immediately persist in SQLite and traces are visible in the Trace dashboard.
 - **Build Cleanliness**: Production Vite bundle (`npm run build`) compiles successfully.
-

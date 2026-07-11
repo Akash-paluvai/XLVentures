@@ -1,0 +1,34 @@
+[tool.ruff]
+# Exclude common directories
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+]
+
+# Target line length
+line-length = 88
+
+[tool.ruff.lint]
+# Enable Pyflakes (F), Pycodestyle (E, W), and Isort (I) rules
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E402",  # Module level import not at top of file (scripts adjust PYTHONPATH dynamically)
+    "E712",  # Avoid equality comparisons to True/False (useful for assertions in test scripts)
+    "E501",  # Line too long (delegated to black formatting check)
+    "F841",  # Local variable assigned to but never used
+    "F401",  # Unused imports
+    "W291",  # Trailing whitespace (handled by pre-commit trailing-whitespace hook)
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | __pycache__
+)/
+'''

@@ -10,16 +10,16 @@ Usage:
     PYTHONPATH=. python backend/scripts/seed_memory.py
 """
 
-import sys
 import logging
+import sys
 from pathlib import Path
 
 # Ensure project root is importable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from backend.core.settings import settings
 from backend.core.logger import setup_logging
+from backend.core.settings import settings
 
 # Initialize root logging configuration early
 setup_logging()
@@ -74,15 +74,23 @@ def seed_playbooks() -> None:
         docs = []
         for md_file in md_files:
             content = md_file.read_text(encoding="utf-8")
-            docs.append({
-                "id": md_file.stem,
-                "content": content,
-                "metadata": {"type": "playbook", "domain": domain_id, "filename": md_file.name},
-            })
+            docs.append(
+                {
+                    "id": md_file.stem,
+                    "content": content,
+                    "metadata": {
+                        "type": "playbook",
+                        "domain": domain_id,
+                        "filename": md_file.name,
+                    },
+                }
+            )
 
         count = add_documents(domain_id, docs)
         total += count
-        logger.info(f"✅ Domain '{domain_id}': ingested {count} playbook(s) into vector database ({settings.VECTOR_DB}).")
+        logger.info(
+            f"✅ Domain '{domain_id}': ingested {count} playbook(s) into vector database ({settings.VECTOR_DB})."
+        )
         for d in docs:
             logger.info(f"   • {d['id']}")
 

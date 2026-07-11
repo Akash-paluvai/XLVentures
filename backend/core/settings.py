@@ -1,7 +1,7 @@
-import os
 from pathlib import Path
-from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from pydantic import model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     Global settings configuration for the FastAPI backend.
     Enables environment variable overrides.
     """
+
     API_V1_PREFIX: str = "/api/v1"
     PROJECT_NAME: str = "Agentic Decision Intelligence Platform"
 
@@ -55,14 +56,14 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=str(Path(__file__).resolve().parent.parent.parent / ".env"),
         env_file_encoding="utf-8",
-        extra="allow"
+        extra="allow",
     )
 
     @model_validator(mode="before")
     @classmethod
     def resolve_paths(cls, values: dict) -> dict:
         base_dir = Path(__file__).resolve().parent.parent.parent
-        
+
         # 1. Resolve DATABASE_URL
         db_url = values.get("DATABASE_URL")
         if not db_url:

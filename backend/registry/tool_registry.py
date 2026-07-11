@@ -5,7 +5,7 @@ Pre-registers platform tools via ``bootstrap_tools()`` so the planner
 can discover tool descriptions and schemas at runtime.
 """
 
-from typing import Dict, Any, List, Callable, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 # Global registry storage for tools
 _tools: Dict[str, Dict[str, Any]] = {}
@@ -54,18 +54,21 @@ def list_tools() -> List[Dict[str, Any]]:
 def _search_accounts(domain_pack_id: str) -> list:
     """Load account/candidate records for a domain."""
     from backend.core.config_loader import load_accounts
+
     return load_accounts(domain_pack_id)
 
 
 def _query_playbooks(domain_pack_id: str, query: str, k: int = 3) -> list:
     """Semantic search over playbook documents."""
     from backend.memory.semantic import query
+
     return query(domain_pack_id, query, k=k)
 
 
 def _get_similar_cases(domain_pack_id: str, query: str, limit: int = 5) -> list:
     """Fuzzy-match past recommendations from episodic memory."""
     from backend.memory.episodic import get_similar_past_cases
+
     return get_similar_past_cases(domain_pack_id, query, limit=limit)
 
 
@@ -82,7 +85,10 @@ def bootstrap_tools() -> None:
         input_schema={
             "type": "object",
             "properties": {
-                "domain_pack_id": {"type": "string", "description": "ID of the domain pack to search"},
+                "domain_pack_id": {
+                    "type": "string",
+                    "description": "ID of the domain pack to search",
+                },
             },
             "required": ["domain_pack_id"],
         },
@@ -95,9 +101,19 @@ def bootstrap_tools() -> None:
         input_schema={
             "type": "object",
             "properties": {
-                "domain_pack_id": {"type": "string", "description": "ID of the domain pack"},
-                "query": {"type": "string", "description": "Natural language query to search playbooks"},
-                "k": {"type": "integer", "description": "Number of results to return", "default": 3},
+                "domain_pack_id": {
+                    "type": "string",
+                    "description": "ID of the domain pack",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Natural language query to search playbooks",
+                },
+                "k": {
+                    "type": "integer",
+                    "description": "Number of results to return",
+                    "default": 3,
+                },
             },
             "required": ["domain_pack_id", "query"],
         },
@@ -110,9 +126,19 @@ def bootstrap_tools() -> None:
         input_schema={
             "type": "object",
             "properties": {
-                "domain_pack_id": {"type": "string", "description": "ID of the domain pack"},
-                "query": {"type": "string", "description": "Text to match against past recommendations"},
-                "limit": {"type": "integer", "description": "Max results to return", "default": 5},
+                "domain_pack_id": {
+                    "type": "string",
+                    "description": "ID of the domain pack",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Text to match against past recommendations",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results to return",
+                    "default": 5,
+                },
             },
             "required": ["domain_pack_id", "query"],
         },

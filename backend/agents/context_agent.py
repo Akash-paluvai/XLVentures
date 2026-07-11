@@ -7,11 +7,11 @@ Works fully without LLM calls. Optionally generates a synthesis summary
 via OpenRouter if OPENROUTER_API_KEY is set AND ENABLE_CONTEXT_SYNTHESIS=true.
 """
 
-import os
 import json
-import time
 import logging
-from typing import Dict, Any, List, Optional
+import os
+import time
+from typing import Any, Dict, List, Optional
 
 from backend.agents.query_builder import build_context_query
 from backend.core.schemas import EvidenceNode
@@ -58,12 +58,22 @@ _EXPECTED_FIELDS = {
 }
 
 _MISSING_KEYWORDS = {
-    "decision_maker": ["vp", "director", "manager", "contact", "champion", "sponsor", "lead"],
+    "decision_maker": [
+        "vp",
+        "director",
+        "manager",
+        "contact",
+        "champion",
+        "sponsor",
+        "lead",
+    ],
     "support_tickets": ["ticket", "support", "issue", "bug"],
 }
 
 
-def _detect_missing_information(entity: Dict[str, Any], domain_pack_id: str) -> List[str]:
+def _detect_missing_information(
+    entity: Dict[str, Any], domain_pack_id: str
+) -> List[str]:
     """
     Simple rule-based detection of missing or empty fields in the entity.
     Returns a list of human-readable descriptions.
@@ -90,7 +100,9 @@ def _detect_missing_information(entity: Dict[str, Any], domain_pack_id: str) -> 
 # ---------------------------------------------------------------------------
 
 
-def _try_llm_synthesis(interaction: str, playbooks: List[Dict], past_cases: List[Dict]) -> Optional[str]:
+def _try_llm_synthesis(
+    interaction: str, playbooks: List[Dict], past_cases: List[Dict]
+) -> Optional[str]:
     """
     Attempt a short LLM-generated synthesis of the retrieved context.
     Only runs if OPENROUTER_API_KEY is set AND ENABLE_CONTEXT_SYNTHESIS=true.
@@ -100,10 +112,13 @@ def _try_llm_synthesis(interaction: str, playbooks: List[Dict], past_cases: List
         return None
 
     from backend.core.settings import settings
+
     if settings.USE_SYNTHESIS_ONLY_IF_NEEDED:
         # Cost saving: Only run expensive synthesis if we have multiple data sources to merge
         if not playbooks or not past_cases:
-            logger.info("ContextAgent: Bypassing synthesis call (single-source or empty evidence).")
+            logger.info(
+                "ContextAgent: Bypassing synthesis call (single-source or empty evidence)."
+            )
             return None
 
     try:
@@ -123,7 +138,7 @@ def _try_llm_synthesis(interaction: str, playbooks: List[Dict], past_cases: List
 
         prompt = (
             f"Given this interaction:\n"
-            f"\"{safe_interaction}\"\n\n"
+            f'"{safe_interaction}"\n\n'
             f"And these retrieved playbooks: {playbook_titles}\n"
             f"And {case_count} similar past case(s).\n\n"
             f"Write a 2-sentence synthesis of what the retrieved context suggests. "
@@ -140,7 +155,7 @@ def _try_llm_synthesis(interaction: str, playbooks: List[Dict], past_cases: List
                 "model": _OPENROUTER_MODEL,
                 "messages": [
                     {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": prompt},
                 ],
                 "max_tokens": 150,
             },
@@ -157,7 +172,9 @@ def _try_llm_synthesis(interaction: str, playbooks: List[Dict], past_cases: List
 # ---------------------------------------------------------------------------
 
 
-def _rerank_playbooks(playbooks: List[Dict[str, Any]], entity: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _rerank_playbooks(
+    playbooks: List[Dict[str, Any]], entity: Dict[str, Any]
+) -> List[Dict[str, Any]]:
     """
     Apply additive score adjustments to playbook distances based on entity signals.
     Lower distance = better match, so we subtract the boost.
@@ -174,11 +191,21 @@ def _rerank_playbooks(playbooks: List[Dict[str, Any]], entity: Dict[str, Any]) -
         pb_id = pb.get("id", "")
 
         # Boost risk playbooks when entity shows risk signals
-        if health is not None and health < 60 and is_declining and pb_id in _RISK_BOOST_PLAYBOOKS:
+        if (
+            health is not None
+            and health < 60
+            and is_declining
+            and pb_id in _RISK_BOOST_PLAYBOOKS
+        ):
             adjusted_distance -= _RERANK_BOOST
 
         # Boost growth playbooks when entity shows growth signals
-        if health is not None and health > 85 and is_increasing and pb_id in _GROWTH_BOOST_PLAYBOOKS:
+        if (
+            health is not None
+            and health > 85
+            and is_increasing
+            and pb_id in _GROWTH_BOOST_PLAYBOOKS
+        ):
             adjusted_distance -= _RERANK_BOOST
 
         reranked.append({**pb, "distance": max(adjusted_distance, 0.01)})
@@ -213,7 +240,9 @@ def _past_case_to_evidence(case: Dict[str, Any]) -> EvidenceNode:
     action = rec.get("selected_action", {})
     content_parts = []
     if action:
-        content_parts.append(f"Action: {action.get('title', 'N/A')} — {action.get('rationale', '')}")
+        content_parts.append(
+            f"Action: {action.get('title', 'N/A')} — {action.get('rationale', '')}"
+        )
     evidence_items = rec.get("evidence", [])
     for ev in evidence_items[:3]:
         content_parts.append(f"Evidence: {ev.get('content', '')}")
@@ -294,9 +323,10 @@ class ContextAgent:
 
         # Step 5: Sort evidence by confidence descending
         evidence.sort(key=lambda e: e.confidence, reverse=True)
-        
+
         # Enforce resource limit on evidence count
         from backend.memory.manager import MAX_EVIDENCE_ITEMS
+
         evidence = evidence[:MAX_EVIDENCE_ITEMS]
 
         # Step 6: Detect missing information
