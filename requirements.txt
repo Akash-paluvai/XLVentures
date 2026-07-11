@@ -13,3 +13,5 @@ sqlalchemy
 openai
 rapidfuzz
 sentence-transformers
+psycopg2-binary
+qdrant-client

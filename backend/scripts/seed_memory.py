@@ -1,8 +1,8 @@
 """
-Seed Memory — discovers all domains and loads playbook markdown files into ChromaDB.
+Seed Memory — discovers all domains and loads playbook markdown files into the active Vector DB.
 
 Domain-agnostic: scans every subdirectory of backend/data/ for a playbooks/ folder
-and seeds the corresponding ChromaDB collection automatically.
+and seeds the corresponding Vector DB collection automatically.
 
 Idempotent: uses upsert so multiple runs do not duplicate data.
 
@@ -11,11 +11,19 @@ Usage:
 """
 
 import sys
+import logging
 from pathlib import Path
 
 # Ensure project root is importable
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
+
+from backend.core.settings import settings
+from backend.core.logger import setup_logging
+
+# Initialize root logging configuration early
+setup_logging()
+logger = logging.getLogger("seed_memory")
 
 from backend.memory.semantic import add_documents
 
@@ -49,18 +57,18 @@ def discover_domains() -> dict:
 
 
 def seed_playbooks() -> None:
-    """Read all .md playbooks across all domains and ingest them into ChromaDB."""
+    """Read all .md playbooks across all domains and ingest them into the active Vector DB."""
     domains = discover_domains()
 
     if not domains:
-        print("⚠️  No domains with playbooks/ directories found in backend/data/")
+        logger.warning("No domains with playbooks/ directories found in backend/data/")
         return
 
     total = 0
     for domain_id, playbook_dir in domains.items():
         md_files = sorted(playbook_dir.glob("*.md"))
         if not md_files:
-            print(f"⚠️  No .md files found in {playbook_dir}")
+            logger.warning(f"No .md files found in {playbook_dir}")
             continue
 
         docs = []
@@ -74,16 +82,16 @@ def seed_playbooks() -> None:
 
         count = add_documents(domain_id, docs)
         total += count
-        print(f"✅ Domain '{domain_id}': ingested {count} playbook(s) into ChromaDB.")
+        logger.info(f"✅ Domain '{domain_id}': ingested {count} playbook(s) into vector database ({settings.VECTOR_DB}).")
         for d in docs:
-            print(f"   • {d['id']}")
+            logger.info(f"   • {d['id']}")
 
-    print(f"\n📊 Total: {total} playbook(s) across {len(domains)} domain(s).")
+    logger.info(f"📊 Total: {total} playbook(s) across {len(domains)} domain(s).")
 
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("  Seeding Memory — Playbook Ingestion (All Domains)")
-    print("=" * 60)
+    logger.info("============================================================")
+    logger.info("  Seeding Memory — Playbook Ingestion (All Domains)")
+    logger.info("============================================================")
     seed_playbooks()
-    print("\nDone.")
+    logger.info("Seeding complete.")

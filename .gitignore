@@ -7,6 +7,7 @@ node_modules/
 dist/
 backend/data/platform.db
 backend/data/chroma/
+backend/data/qdrant/
 *.egg-info/
 .DS_Store
 .pytest_cache/

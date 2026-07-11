@@ -1,6 +1,18 @@
 import logging
 import sys
+import contextvars
 from backend.core.settings import settings
+
+# Global request ID context variable for structured tracing
+request_id_ctx_var: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
+
+
+class RequestIdFilter(logging.Filter):
+    def filter(self, record):
+        # Set request_id attribute dynamically for the formatter to consume
+        record.request_id = request_id_ctx_var.get()
+        return True
+
 
 def setup_logging():
     """
@@ -17,8 +29,10 @@ def setup_logging():
         
     # Configure root logger level and handler
     handler = logging.StreamHandler(sys.stdout)
+    handler.addFilter(RequestIdFilter())
+    
     formatter = logging.Formatter(
-        fmt="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        fmt="%(asctime)s [%(levelname)s] [%(request_id)s] %(name)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
     handler.setFormatter(formatter)

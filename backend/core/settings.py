@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # Database & Memory Configuration (resolved to absolute paths on validation)
     DATABASE_URL: str = ""
     CHROMA_PATH: str = ""
+    VECTOR_DB: str = "chroma"  # "chroma" or "qdrant"
+    QDRANT_URL: str = ""
+    QDRANT_API_KEY: str = ""
+    QDRANT_PATH: str = ""
     MEMORY_COLLECTION_PREFIX: str = "domain_"
 
     # Environment settings
@@ -32,6 +36,11 @@ class Settings(BaseSettings):
     # Infrastructure settings
     LOG_LEVEL: str = "INFO"
     ENVIRONMENT: str = "development"
+
+    # Build & Version Metadata
+    BUILD_VERSION: str = "1.0.0"
+    GIT_COMMIT: str = "unknown"
+    BUILD_DATE: str = "2026-07-12"
 
     # Hardening & Guardrail parameters
     ENABLE_PII_REDACTION: bool = True
@@ -80,6 +89,16 @@ class Settings(BaseSettings):
             p = Path(chroma_path)
             if not p.is_absolute():
                 values["CHROMA_PATH"] = str(base_dir / "backend" / chroma_path)
+
+        # 3. Resolve QDRANT_PATH
+        qdrant_path = values.get("QDRANT_PATH")
+        if not qdrant_path:
+            qdrant_path = str(base_dir / "backend" / "data" / "qdrant")
+            values["QDRANT_PATH"] = qdrant_path
+        else:
+            p = Path(qdrant_path)
+            if not p.is_absolute():
+                values["QDRANT_PATH"] = str(base_dir / "backend" / qdrant_path)
 
         return values
 

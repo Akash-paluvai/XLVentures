@@ -16,7 +16,11 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 from backend.core.settings import settings
 
-engine = create_engine(settings.DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
+engine_args = {}
+if settings.DATABASE_URL.startswith("sqlite"):
+    engine_args["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(settings.DATABASE_URL, echo=False, **engine_args)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 

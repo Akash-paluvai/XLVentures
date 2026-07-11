@@ -2,14 +2,18 @@ import logging
 import json
 import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 import uuid
 
 from backend.core.settings import settings
-from backend.core.logger import setup_logging
+from backend.core.logger import setup_logging, request_id_ctx_var
 
 # Initialize root logging configuration early
 setup_logging()
@@ -30,7 +34,7 @@ from backend.core.impact_engine import assess_impact
 logger = logging.getLogger("api")
 
 def ensure_directories():
-    """Ensure that the data and chroma directories exist before startup."""
+    """Ensure that the data and vector store directories exist before startup."""
     from pathlib import Path
     
     # Determine SQLite DB directory from DATABASE_URL
@@ -40,18 +44,103 @@ def ensure_directories():
         db_path.parent.mkdir(parents=True, exist_ok=True)
         logger.info(f"SQLite directory checked/created at: {db_path.parent}")
         
-    # Determine ChromaDB directory
-    chroma_path = Path(settings.CHROMA_PATH)
-    chroma_path.mkdir(parents=True, exist_ok=True)
-    logger.info(f"ChromaDB directory checked/created at: {chroma_path}")
+    # Determine ChromaDB directory (only if VECTOR_DB is chroma)
+    if settings.VECTOR_DB == "chroma":
+        chroma_path = Path(settings.CHROMA_PATH)
+        chroma_path.mkdir(parents=True, exist_ok=True)
+        logger.info(f"ChromaDB directory checked/created at: {chroma_path}")
+        
+    # Determine Qdrant local directory (only if VECTOR_DB is qdrant and not using remote Qdrant)
+    if settings.VECTOR_DB == "qdrant" and not settings.QDRANT_URL:
+        qdrant_path = Path(settings.QDRANT_PATH)
+        qdrant_path.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Qdrant local directory checked/created at: {qdrant_path}")
+
+def check_db_health() -> bool:
+    """Test connection to the SQL database."""
+    try:
+        from sqlalchemy import text
+        with SessionLocal() as session:
+            session.execute(text("SELECT 1"))
+        return True
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}")
+        return False
+
+def check_vector_store_health() -> bool:
+    """Test connection to the active vector database."""
+    try:
+        from backend.memory import semantic
+        return semantic.is_healthy()
+    except Exception as e:
+        logger.error(f"Vector store health check failed: {e}")
+        return False
+
+def validate_storage_connections():
+    """Verify core storage layers are reachable on startup. Fails fast if critical databases are down."""
+    # 1. Check Database (critical)
+    logger.info("Verifying database connection...")
+    if not check_db_health():
+        logger.error("CRITICAL: Database connection check failed!")
+        raise RuntimeError("Database connection check failed.")
+    logger.info("Database connection validated successfully.")
+    
+    # 2. Check Vector DB (critical)
+    logger.info(f"Verifying vector store connection ({settings.VECTOR_DB})...")
+    if not check_vector_store_health():
+        logger.error("CRITICAL: Vector store connection check failed!")
+        raise RuntimeError("Vector store connection check failed.")
+    logger.info("Vector store connection validated successfully.")
+
+    # 3. Check LLM Key (optional/warning only)
+    logger.info("Verifying LLM service configuration...")
+    if not settings.OPENROUTER_API_KEY:
+        logger.warning("WARNING: OPENROUTER_API_KEY is not configured. Heuristic fallbacks will be used.")
+    else:
+        logger.info("LLM service configured successfully.")
+
+def print_startup_banner():
+    # Determine SQLite vs Postgres URL type
+    db_type = "PostgreSQL" if settings.DATABASE_URL.startswith("postgresql") else "SQLite"
+    vs_type = settings.VECTOR_DB.upper()
+    
+    # Count playbooks
+    playbook_count = 0
+    data_dir = settings.BASE_DIR / "backend" / "data"
+    for d in ["customer_success", "recruitment"]:
+        playbook_dir = data_dir / d / "playbooks"
+        if playbook_dir.exists():
+            playbook_count += len(list(playbook_dir.glob("*.md")))
+            
+    # Count agents
+    from backend.registry.agent_registry import list_agents
+    agents_count = len(list_agents())
+    
+    banner = f"""
+============================================================
+  DECISION INTELLIGENCE PLATFORM STARTED SUCCESSFULLY
+
+  Environment  : {settings.ENVIRONMENT.capitalize()}
+  Planner      : Loaded
+  Agents       : {agents_count}
+  Domain Packs : 2 (Customer Success, Recruitment)
+  Playbooks    : {playbook_count}
+  Database     : Connected ({db_type})
+  Vector Store : Connected ({vs_type})
+============================================================
+"""
+    print(banner, flush=True)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """On startup, initialize directories, validate domain packs, and bootstrap agents."""
+    """On startup, initialize directories, validate storage connections, validate configs, and bootstrap agents."""
     # 1. Run filesystem setup
     ensure_directories()
     
-    # 2. Validate configurations & domain packs
+    # 2. Validate storage connections
+    validate_storage_connections()
+    
+    # 3. Validate configurations & domain packs
     logger.info("Initializing and validating domain packs...")
     for pack_name in ["customer_success", "recruitment"]:
         try:
@@ -65,7 +154,7 @@ async def lifespan(app: FastAPI):
             logger.error(f"CRITICAL: Failed to validate '{pack_name}': {e}")
             raise RuntimeError(f"Domain pack '{pack_name}' invalid or missing: {e}")
 
-    # 3. Validate playbooks exist
+    # 4. Validate playbooks exist
     logger.info("Validating playbooks presence...")
     data_dir = settings.BASE_DIR / "backend" / "data"
     playbooks_found = False
@@ -81,25 +170,136 @@ async def lifespan(app: FastAPI):
         logger.error("CRITICAL: No playbooks found in backend/data! Seeding memory is required.")
         raise RuntimeError("CRITICAL: No playbooks found in backend/data. Check data paths.")
 
-    # 4. Bootstrap agents in registry
+    # 5. Bootstrap agents in registry
     logger.info("Bootstrapping agents in registry...")
     bootstrap_agents()
+
+    # 6. Validate Planner Graph compiles
+    logger.info("Verifying planner compilation...")
+    try:
+        if graph is None:
+            raise ValueError("Planner compilation returned None")
+        logger.info("Planner compilation verified successfully.")
+    except Exception as e:
+        logger.error(f"CRITICAL: Planner verification failed: {e}")
+        raise RuntimeError(f"Planner initialization failed: {e}")
+
+    # Print beautiful startup banner
+    print_startup_banner()
+    
     yield
+    
+    # Graceful Shutdown
+    logger.info("============================================================")
+    logger.info("  Shutting down Decision Intelligence Platform...")
+    logger.info("  Closing DB connections...")
+    logger.info("  Closing Vector Store connections...")
+    logger.info("  Goodbye!")
+    logger.info("============================================================")
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    description="FastAPI backend for Agentic Decision Intelligence Platform",
+    title="Agentic Decision Intelligence Platform",
+    description="""
+    Production-grade backend for SaaS account management, renewal risk intelligence, 
+    and automated closed-loop learning.
+    """,
+    version="1.0.0",
+    contact={
+        "name": "XL Ventures Support",
+        "url": "https://github.com/Akash-paluvai/XLVentures",
+    },
+    license_info={
+        "name": "MIT License",
+    },
     lifespan=lifespan
 )
 
+# Custom class-based middleware for request tracking (Request ID & Response Time)
+class ProductionMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Extract or generate unique Request ID
+        request_id = request.headers.get("X-Request-ID")
+        if not request_id:
+            request_id = str(uuid.uuid4())
+            
+        # Set context var for logger to consume in request logs
+        token = request_id_ctx_var.set(request_id)
+        
+        start_time = time.perf_counter()
+        response = None
+        try:
+            response = await call_next(request)
+            process_time_ms = int((time.perf_counter() - start_time) * 1000)
+            
+            # Inject headers
+            response.headers["X-Response-Time"] = f"{process_time_ms}ms"
+            response.headers["X-Request-ID"] = request_id
+            
+            # Log the request details with response time
+            logger.info(
+                f"{request.method} {request.url.path} - "
+                f"Status {response.status_code} - "
+                f"Duration: {process_time_ms}ms"
+            )
+            return response
+        except Exception as e:
+            process_time_ms = int((time.perf_counter() - start_time) * 1000)
+            logger.error(f"Request failed: {e} - Duration: {process_time_ms}ms")
+            raise e
+        finally:
+            # Reset ContextVar
+            request_id_ctx_var.reset(token)
+
+app.add_middleware(ProductionMiddleware)
+
 # CORS configuration from settings
+origins = [o for o in settings.CORS_ORIGINS if o]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Global Exception Handlers returning unified JSON format without leaking internal traces
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"Validation error occurred: {exc}")
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": "ValidationError",
+            "message": "Invalid request payload parameters.",
+            "details": exc.errors()
+        }
+    )
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    logger.error(f"HTTP error occurred (Status {exc.status_code}): {exc.detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.__class__.__name__,
+            "message": exc.detail
+        }
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception occurred: {exc}", exc_info=True)
+    # Hide Python traceback in production
+    message = "An unexpected internal server error occurred."
+    if settings.ENVIRONMENT == "development":
+        message = f"Unhandled Exception: {str(exc)}"
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "InternalServerError",
+            "message": message
+        }
+    )
 
 
 # ── Request schemas ──────────────────────────────────────────────────────────
@@ -131,11 +331,65 @@ class InteractionRequest(BaseModel):
 # ── Startup/Lifespan Handler Completed ────────────────────────────────────────
 
 
-# ── Health ───────────────────────────────────────────────────────────────────
+# ── Health & Readiness ────────────────────────────────────────────────────────
 
 @app.get(f"{settings.API_V1_PREFIX}/health")
 def get_health():
-    return {"status": "healthy"}
+    db_healthy = check_db_health()
+    vs_healthy = check_vector_store_health()
+    
+    status = "healthy" if (db_healthy and vs_healthy) else "unhealthy"
+    
+    return {
+        "status": status,
+        "services": {
+            "database": "connected" if db_healthy else "error",
+            "vector_store": "connected" if vs_healthy else "error",
+            "llm": "configured" if settings.OPENROUTER_API_KEY else "warning"
+        },
+        "build": {
+            "version": settings.BUILD_VERSION,
+            "environment": settings.ENVIRONMENT,
+            "git_commit": settings.GIT_COMMIT,
+            "build_date": settings.BUILD_DATE
+        }
+    }
+
+@app.get(f"{settings.API_V1_PREFIX}/ready")
+def get_readiness():
+    db_healthy = check_db_health()
+    vs_healthy = check_vector_store_health()
+    
+    planner_loaded = graph is not None
+    
+    domain_packs_count = 0
+    try:
+        for pack in ["customer_success", "recruitment"]:
+            load_domain_pack(pack)
+            domain_packs_count += 1
+    except Exception:
+        pass
+        
+    if db_healthy and vs_healthy and planner_loaded and domain_packs_count > 0:
+        return {
+            "status": "ready",
+            "database": "connected",
+            "vector_store": "connected",
+            "planner": "loaded",
+            "domain_packs": domain_packs_count
+        }
+    else:
+        from fastapi import status
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "status": "not ready",
+                "database": "connected" if db_healthy else "error",
+                "vector_store": "connected" if vs_healthy else "error",
+                "planner": "loaded" if planner_loaded else "error",
+                "domain_packs": domain_packs_count
+            }
+        )
 
 
 # ── Domain & Accounts ────────────────────────────────────────────────────────
