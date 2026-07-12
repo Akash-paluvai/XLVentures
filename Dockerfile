@@ -21,9 +21,22 @@ COPY . .
 # Create backend data directories and ensure correct permissions
 RUN mkdir -p backend/data && chmod -R 775 backend/data
 
-# Create and switch to a secure non-root user
-RUN useradd -u 10001 appuser && chown -R appuser:appuser /app
+# Create and switch to a secure non-root user with home directory and cache folders
+RUN useradd -m -s /bin/bash -u 10001 appuser \
+    && mkdir -p /home/appuser/.cache/huggingface \
+    && mkdir -p /home/appuser/.cache/sentence_transformers \
+    && chown -R appuser:appuser /home/appuser /app
+
+# Configure HuggingFace cache folders to be under the writable home directory
+ENV HOME=/home/appuser
+ENV HF_HOME=/home/appuser/.cache/huggingface
+ENV TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface
+ENV SENTENCE_TRANSFORMERS_HOME=/home/appuser/.cache/sentence_transformers
+
 USER appuser
+
+# Pre-download SentenceTransformer weights so they are cached inside the image and startup is instant
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
 
 EXPOSE 8000
 
