@@ -8,11 +8,11 @@ This document reports execution performance and baseline system latency metrics 
 
 | Operation | Latency | Status | Target Threshold |
 | --- | --- | --- | --- |
-| Episodic Database Connection check | 0.34 ms | PASS | < 50 ms |
-| Vector store Connection check | 7966.15 ms | PASS | < 100 ms |
-| Average Semantic vector query | 6.82 ms | PASS | < 150 ms |
-| Graph Compilation evaluation | 0.00 ms | PASS | < 10 ms |
-| Ingestion & In-Memory Config loading | 0.73 ms | PASS | < 50 ms |
+| Episodic Database Connection check | 708.24 ms | PASS | < 50 ms |
+| Vector store Connection check | 9152.91 ms | PASS | < 100 ms |
+| Average Semantic vector query | 488.14 ms | PASS | < 150 ms |
+| Graph Compilation evaluation | 0.03 ms | PASS | < 10 ms |
+| Ingestion & In-Memory Config loading | 2.05 ms | PASS | < 50 ms |
 
 ---
 
@@ -20,16 +20,16 @@ This document reports execution performance and baseline system latency metrics 
 
 ### RDBMS Episodic Storage
 * **Driver**: SQLite (`platform.db` local persistence file system)
-* **Performance Profile**: Connection verification completes in **0.34 ms**. Fast local SQL reads prevent episodic memory lookups from bottlenecking agent execution.
+* **Performance Profile**: Connection verification completes in **708.24 ms**. Fast local SQL reads prevent episodic memory lookups from bottlenecking agent execution.
 
 ### Vector Semantic Search
 * **Driver**: ChromaDB (Default active driver)
-* **Performance Profile**: Cosine similarity match over playbooks using the local `SentenceTransformer` embedder takes an average of **6.82 ms**.
+* **Performance Profile**: Cosine similarity match over playbooks using the local `SentenceTransformer` embedder takes an average of **488.14 ms**.
 * **Note**: In production, Qdrant cluster latency will be bound by network roundtrip time (~15-40ms).
 
 ### Multi-Agent Planner State Orchestration
 * **Engine**: LangGraph Graph State Saver
-* **Performance Profile**: Graph compilation verification takes **0.00 ms**. State updates are processed in-memory, avoiding serialization overhead.
+* **Performance Profile**: Graph compilation verification takes **0.03 ms**. State updates are processed in-memory, avoiding serialization overhead.
 
 ---
 
