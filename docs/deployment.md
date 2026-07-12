@@ -41,7 +41,7 @@ The React client compiles static bundles and is served globally via Vercel.
 2. Set build directory to `frontend/dist` (or `frontend` root with output directory `dist`).
 3. Set the Build Command: `npm run build`
 4. Set the Install Command: `npm install`
-5. Configure `VITE_API_BASE_URL` to point to your Railway API domain (e.g. `https://my-backend-app.railway.app/api/v1`).
+5. Configure `VITE_API_BASE_URL` to point to your Railway API domain (e.g. `https://xlventures-production.up.railway.app/api/v1`).
 
 ---
 
