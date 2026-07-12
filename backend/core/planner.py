@@ -711,9 +711,9 @@ def explanation_node(state: PlatformState) -> dict:
 
         # Mark other options as rejected due to low confidence safety override
         for act in out.get("candidate_actions", []):
-            act[
-                "rejected_reason"
-            ] = "Advisory safety override triggered. Action postponed pending information request."
+            act["rejected_reason"] = (
+                "Advisory safety override triggered. Action postponed pending information request."
+            )
 
         out["candidate_actions"] = [advisory_action] + out.get("candidate_actions", [])
         out["computed_confidence"]["confidence_band"] = "Low Confidence"

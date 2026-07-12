@@ -221,7 +221,9 @@ def main():
         print("   Excerpt from learned heuristics:")
         print(f"   {heuristic_pb['content'][:250].strip()}...")
     else:
-        print("\n❌ FAILURE: 'learned_heuristics' was not found in retrieved playbooks.")
+        print(
+            "\n❌ FAILURE: 'learned_heuristics' was not found in retrieved playbooks."
+        )
 
     print(SEPARATOR)
     print("  Full 5-agent pipeline test completed successfully.")
