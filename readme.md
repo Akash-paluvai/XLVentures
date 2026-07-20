@@ -105,10 +105,10 @@ The repository is built on a modular driver design. You can swap storage engines
 * **Client Frontend**: React 19 + Zustand state hooks + Vanilla CSS.
 
 ### Storage Drivers
-* **Relational DB**: [episodic.py](file:///Users/akashpaluvai/college/agenticplatform/XLVenturesHackathon/backend/memory/episodic.py) (SQLAlchemy repository).
+* **Relational DB**: [episodic.py](backend/memory/episodic.py) (SQLAlchemy repository).
   * **Development**: SQLite (`backend/data/platform.db`).
   * **Production**: PostgreSQL (Auto-schema creation).
-* **Vector Store**: [factory.py](file:///Users/akashpaluvai/college/agenticplatform/XLVenturesHackathon/backend/vectorstores/factory.py).
+* **Vector Store**: [factory.py](backend/vectorstores/factory.py).
   * **Development**: ChromaDB (In-memory file system).
   * **Production**: Qdrant Cloud Cluster.
 
@@ -116,10 +116,10 @@ The repository is built on a modular driver design. You can swap storage engines
 
 ## 5. Architecture Decision Records (ADRs)
 Our engineering design choices are documented in standard ADR templates:
-* [ADR 001: Why LangGraph](file:///Users/akashpaluvai/college/agenticplatform/XLVenturesHackathon/docs/adr/001-why-langgraph.md) - Rationale for cycles, persistence, and pauses.
-* [ADR 002: Why FastAPI](file:///Users/akashpaluvai/college/agenticplatform/XLVenturesHackathon/docs/adr/002-why-fastapi.md) - Benefits of async concurrency and OpenAPI.
-* [ADR 003: Why React](file:///Users/akashpaluvai/college/agenticplatform/XLVenturesHackathon/docs/adr/003-why-react.md) - Dynamic client views and lightweight states.
-* [ADR 004: Why Vector Memory Abstraction](file:///Users/akashpaluvai/college/agenticplatform/XLVenturesHackathon/docs/adr/004-why-vector-memory.md) - Decoupling database wrappers from core agents.
+* [ADR 001: Why LangGraph](docs/adr/001-why-langgraph.md) - Rationale for cycles, persistence, and pauses.
+* [ADR 002: Why FastAPI](docs/adr/002-why-fastapi.md) - Benefits of async concurrency and OpenAPI.
+* [ADR 003: Why React](docs/adr/003-why-react.md) - Dynamic client views and lightweight states.
+* [ADR 004: Why Vector Memory Abstraction](docs/adr/004-why-vector-memory.md) - Decoupling database wrappers from core agents.
 
 ---
 
@@ -283,11 +283,11 @@ During implementation, we balanced operational convenience with enterprise requi
 
 ## 9. Detailed Document Directory
 For more details, view the individual documentation files:
-* [Architecture Guide](file:///Users/akashpaluvai/college/agenticplatform/XLVenturesHackathon/docs/architecture.md)
-* [Planner Configuration](file:///Users/akashpaluvai/college/agenticplatform/XLVenturesHackathon/docs/planner.md)
-* [Memory Wrappers](file:///Users/akashpaluvai/college/agenticplatform/XLVenturesHackathon/docs/memory.md)
-* [Agent Specs](file:///Users/akashpaluvai/college/agenticplatform/XLVenturesHackathon/docs/agents.md)
-* [Cloud Deployment](file:///Users/akashpaluvai/college/agenticplatform/XLVenturesHackathon/docs/deployment.md)
+* [Architecture Guide](docs/architecture.md) - High-level block diagram, subsystem specs, sequence diagrams, and security boundaries.
+* [Planner Configuration](docs/planner.md) - LangGraph state graph compilation, TypedDict schemas, interrupt mechanics, and safety limits.
+* [Memory Wrappers](docs/memory.md) - Dual-core memory model, relational episodic schemas (SQLite/Postgres), and vector stores (ChromaDB/Qdrant).
+* [Agent Specs](docs/agents.md) - Specifications for all 5 core agents, Agent Registry, Interaction Analyzer, and Impact Engine.
+* [Cloud Deployment](docs/deployment.md) - Complete production guide for Railway backend, Vercel frontend, Qdrant Cloud, and PostgreSQL.
 
 ---
 
